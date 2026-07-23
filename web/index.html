@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>callback-ai</title>
+<style>
+  body { background: #0d0f10; color: #d4d4d4; font-family: "SF Mono", Menlo, Consolas, monospace;
+         max-width: 780px; margin: 2rem auto; padding: 0 1rem; }
+  h1 { color: #7ee787; font-size: 1.1rem; }
+  #setup textarea, #setup input { width: 100%; background: #16181a; color: #d4d4d4;
+         border: 1px solid #333; padding: 0.5rem; margin-bottom: 0.6rem; font-family: inherit; }
+  #setup select, #setup button { background: #16181a; color: #d4d4d4; border: 1px solid #333;
+         padding: 0.5rem; font-family: inherit; }
+  #log { white-space: pre-wrap; line-height: 1.5; margin-top: 1rem; }
+  .q { color: #79c0ff; }
+  .fb { color: #e3b341; }
+  .a { color: #d4d4d4; }
+  #answer-row { display: none; margin-top: 1rem; }
+  #answer-row input { width: 80%; background: #16181a; color: #d4d4d4; border: 1px solid #333;
+         padding: 0.5rem; font-family: inherit; }
+  #answer-row button { padding: 0.5rem 1rem; }
+</style>
+</head>
+<body>
+<h1>callback-ai — adaptive interview simulator</h1>
+
+<div id="setup">
+  <label>Job post</label>
+  <textarea id="job-post" rows="5" placeholder="Paste the job posting text"></textarea>
+  <label>Resume (optional)</label>
+  <textarea id="resume" rows="4" placeholder="Paste resume text"></textarea>
+  <label>Portfolio link (optional)</label>
+  <input id="portfolio-link" placeholder="https://...">
+  <label>Persona</label>
+  <select id="persona">
+    <option value="neutral">Neutral</option>
+    <option value="friendly">Friendly</option>
+    <option value="adversarial">Adversarial</option>
+  </select>
+  <button id="start-btn">Start session</button>
+</div>
+
+<div id="log"></div>
+
+<div id="answer-row">
+  <input id="answer-input" placeholder="Your answer...">
+  <button id="send-btn">Send</button>
+</div>
+
+<script>
+const log = document.getElementById("log");
+const answerRow = document.getElementById("answer-row");
+let sessionId = null;
+
+function append(cls, text) {
+  const div = document.createElement("div");
+  div.className = cls;
+  div.textContent = text;
+  log.appendChild(div);
+}
+
+document.getElementById("start-btn").onclick = async () => {
+  const body = {
+    job_post: document.getElementById("job-post").value,
+    resume: document.getElementById("resume").value || null,
+    portfolio_link: document.getElementById("portfolio-link").value || null,
+    persona: document.getElementById("persona").value,
+  };
+  const resp = await fetch("/api/sessions", { method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify(body) });
+  const data = await resp.json();
+  sessionId = data.session_id;
+  if (data.conflicts) append("fb", `Note: ${data.conflicts} conflicting claim(s) found between your sources.`);
+  append("q", "Interviewer: " + data.question);
+  document.getElementById("setup").style.display = "none";
+  answerRow.style.display = "block";
+};
+
+async function sendAnswer() {
+  const input = document.getElementById("answer-input");
+  const answer = input.value;
+  if (!answer) return;
+  append("a", "You: " + answer);
+  input.value = "";
+
+  const resp = await fetch(`/api/sessions/${sessionId}/answer`, {
+    method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify({ answer })
+  });
+  const data = await resp.json();
+  append("fb", data.feedback);
+
+  if (data.done) {
+    answerRow.style.display = "none";
+    const reportResp = await fetch(`/api/sessions/${sessionId}/report`);
+    const report = await reportResp.json();
+    append("fb", "\n--- Report ---\n" + report.report.overall_summary);
+  } else {
+    append("q", "Interviewer: " + data.next_question);
+  }
+}
+
+document.getElementById("send-btn").onclick = sendAnswer;
+document.getElementById("answer-input").addEventListener("keydown", (e) => { if (e.key === "Enter") sendAnswer(); });
+</script>
+</body>
+</html>
