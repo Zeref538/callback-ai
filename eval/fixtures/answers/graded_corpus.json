@@ -1,0 +1,12 @@
+[
+  {"question": "Tell me about a time you improved performance.", "answer": "I made some things faster and it worked well.", "human_score": 1},
+  {"question": "Tell me about a time you improved performance.", "answer": "I looked at slow parts of the code and fixed a few of them.", "human_score": 2},
+  {"question": "Tell me about a time you improved performance.", "answer": "I noticed the API was slow so I added some caching.", "human_score": 4},
+  {"question": "Tell me about a time you improved performance.", "answer": "I added a Redis cache in front of a slow database query, which helped latency noticeably.", "human_score": 6},
+  {"question": "Tell me about a time you improved performance.", "answer": "I profiled the payment webhook handler, found N+1 queries, and added a cache. Latency dropped from about 800ms to 300ms.", "human_score": 8},
+  {"question": "Tell me about a time you improved performance.", "answer": "I profiled our payment webhook handler with py-spy, found N+1 queries hitting Postgres, added a Redis cache in front of the lookup with a 60s TTL, and cut p99 latency from 800ms to 120ms, verified over a week of production traffic.", "human_score": 10},
+  {"question": "Describe a production incident you handled.", "answer": "There was an issue and I fixed it.", "human_score": 1},
+  {"question": "Describe a production incident you handled.", "answer": "The service went down and I restarted it.", "human_score": 3},
+  {"question": "Describe a production incident you handled.", "answer": "A deploy broke retries and caused some duplicate charges. I rolled back and wrote it up.", "human_score": 6},
+  {"question": "Describe a production incident you handled.", "answer": "A deploy introduced a race condition in our retry logic that double-charged 40 customers. I rolled back within 10 minutes, wrote a postmortem, and added an idempotency key check that's since caught 3 similar bugs in CI.", "human_score": 9}
+]
