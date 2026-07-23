@@ -36,12 +36,16 @@ def test_full_session_via_api(tmp_path, monkeypatch):
     data = start_resp.json()
     session_id = data["session_id"]
     assert data["question"] == QUESTION_RESPONSE
+    assert data["competency"] == "System Design"
+    assert data["competencies"] == ["System Design"]
 
     answer_resp = client.post(f"/api/sessions/{session_id}/answer", json={"answer": ANSWER_TEXT})
     assert answer_resp.status_code == 200
     answer_data = answer_resp.json()
     assert answer_data["done"] is True
     assert answer_data["coverage_score"] == 0.8
+    assert answer_data["next_competency"] is None
+    assert answer_data["turn"] == 1
 
     report_resp = client.get(f"/api/sessions/{session_id}/report")
     assert report_resp.status_code == 200

@@ -45,7 +45,14 @@ def start_session(req: StartSessionRequest) -> StartSessionResponse:
     SESSIONS[logger.session_id] = session
 
     question = session.next_question()
-    return StartSessionResponse(session_id=logger.session_id, question=question, conflicts=len(inventory.conflicts))
+    return StartSessionResponse(
+        session_id=logger.session_id,
+        question=question,
+        competency=session._current_competency,
+        competencies=[c.name for c in rubric.competencies],
+        budget=req.budget,
+        conflicts=len(inventory.conflicts),
+    )
 
 
 @router.post("/sessions/{session_id}/answer", response_model=AnswerResponse)
@@ -64,6 +71,8 @@ def submit_answer(session_id: str, req: AnswerRequest) -> AnswerResponse:
         low_confidence=result["low_confidence"],
         done=result["done"],
         next_question=next_question,
+        next_competency=session._current_competency if not result["done"] else None,
+        turn=session.turn,
     )
 
 

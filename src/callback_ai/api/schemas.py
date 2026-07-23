@@ -14,6 +14,9 @@ class StartSessionRequest(BaseModel):
 class StartSessionResponse(BaseModel):
     session_id: str
     question: str | None
+    competency: str | None = None
+    competencies: list[str] = []
+    budget: int = settings.question_budget
     conflicts: int = 0
 
 
@@ -27,3 +30,5 @@ class AnswerResponse(BaseModel):
     low_confidence: bool
     done: bool
     next_question: str | None = None
+    next_competency: str | None = None
+    turn: int = 0
