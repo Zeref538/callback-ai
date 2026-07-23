@@ -1,0 +1,12 @@
+Jane Doe — Backend Engineer
+
+Projects:
+- Payments retry service: built an idempotent retry layer for failed payment
+  webhooks using Redis-backed locks. Reduced duplicate-charge incidents by
+  ~30% over one quarter.
+- Internal admin tool: built a Django admin panel used by the support team to
+  refund transactions; added audit logging for compliance.
+
+Skills: Python, Go, PostgreSQL, Redis, Kubernetes (basic), Terraform (basic).
+
+Experience: 2 years as a backend engineer at a fintech startup.

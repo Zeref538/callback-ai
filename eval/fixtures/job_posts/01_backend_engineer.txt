@@ -1,0 +1,15 @@
+Backend Engineer (Mid-level) — Payments Team
+
+We're looking for a backend engineer to join our payments infrastructure team.
+You'll design and operate services that process millions of transactions a
+day, so experience with distributed systems, idempotency, and data
+consistency under failure is essential. You should be comfortable with SQL
+and at least one of Python, Go, or Java.
+
+Responsibilities:
+- Design APIs and services with strong consistency guarantees
+- Debug production incidents and write postmortems
+- Collaborate with product and compliance on payment flows
+
+We value engineers who communicate tradeoffs clearly to non-technical
+stakeholders and who mentor junior teammates.

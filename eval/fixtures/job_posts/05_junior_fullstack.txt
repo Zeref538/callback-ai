@@ -1,0 +1,10 @@
+Junior Full-Stack Engineer (New Grad)
+
+Great first role for someone who has shipped at least one real project (class,
+internship, or personal). You'll work across a Django backend and a React
+frontend, with close mentorship from senior engineers. We care more about
+fundamentals (data structures, debugging process, willingness to ask
+questions) than years of experience.
+
+You should be able to walk through a project you built end to end, including
+decisions you'd make differently now.

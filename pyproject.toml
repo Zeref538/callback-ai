@@ -1,0 +1,23 @@
+[project]
+name = "callback-ai"
+version = "0.1.0"
+description = "Adaptive interview simulator agent: probes vague answers, budgets questions by uncertainty, grades with cited evidence."
+requires-python = ">=3.10"
+dependencies = [
+    "httpx>=0.27",
+    "pydantic>=2.6",
+    "python-dotenv>=1.0",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0"]
+
+[project.scripts]
+callback-ai = "callback_ai.cli.main:main"
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]

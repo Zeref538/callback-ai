@@ -1,0 +1,11 @@
+Frontend Engineer — Growth Team
+
+Join our growth team building the marketing site and onboarding flows that
+drive signups. Strong React and TypeScript skills required. You should care
+about performance (Core Web Vitals), accessibility, and A/B test hygiene.
+
+We ship fast and iterate based on data — you'll be expected to instrument
+experiments and read the results yourself, not just build to spec.
+
+Nice to have: design system experience, Next.js, basic SQL for pulling your
+own experiment data.

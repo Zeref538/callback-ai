@@ -1,0 +1,10 @@
+DevOps / Platform Engineer
+
+You'll own our CI/CD pipelines, Kubernetes clusters, and observability stack.
+Required: strong Linux fundamentals, Terraform or equivalent IaC experience,
+and hands-on Kubernetes operation (not just reading manifests). Comfortable
+being on an incident rotation and writing blameless postmortems.
+
+We're a small platform team supporting ~40 engineers, so you'll need to
+prioritize ruthlessly and communicate what you're NOT doing, not just what
+you are.

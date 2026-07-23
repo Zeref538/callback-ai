@@ -1,0 +1,11 @@
+Machine Learning Engineer — Search Relevance
+
+We're hiring an ML engineer to improve search ranking. You'll own the
+pipeline from feature extraction through model training to online serving.
+Strong Python, familiarity with a modern ML framework (PyTorch or similar),
+and experience running and interpreting A/B tests for ranking changes is
+required.
+
+Seniority bar: 2+ years shipping ML models to production, not just notebooks.
+You should be able to explain why a model regressed a metric and what you'd
+check first.

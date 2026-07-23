@@ -1,0 +1,22 @@
+[
+  {
+    "question": "Tell me about a time you improved performance.",
+    "answer": "I made some things faster and it worked well.",
+    "label": "vague"
+  },
+  {
+    "question": "Tell me about a time you improved performance.",
+    "answer": "I profiled our payment webhook handler, found N+1 queries hitting Postgres, added a Redis cache in front of the lookup, and cut p99 latency from 800ms to 120ms.",
+    "label": "specific"
+  },
+  {
+    "question": "Describe a production incident you handled.",
+    "answer": "There was an issue and I fixed it.",
+    "label": "vague"
+  },
+  {
+    "question": "Describe a production incident you handled.",
+    "answer": "A deploy introduced a race condition in our retry logic that double-charged 40 customers. I rolled back within 10 minutes, wrote a postmortem, and added an idempotency key check that's since caught 3 similar bugs in CI.",
+    "label": "specific"
+  }
+]
