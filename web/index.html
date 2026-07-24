@@ -5,303 +5,489 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>callback-ai — adaptive interview simulator</title>
 <meta name="color-scheme" content="dark light">
-<script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
-<style type="text/tailwindcss">
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+/* ============================================================
+   Plain CSS on purpose: this page is served as one static file,
+   so a build step or a runtime CSS framework would be a
+   dependency that can fail (it did) for no benefit here.
+   Design language borrowed from the Aegix-AI frontend:
+   cinematic near-black oklch surfaces, bokeh orbs, hairline
+   borders, Inter. Emerald accent instead of Aegix's indigo.
+   ============================================================ */
 
-@theme {
-  --font-sans: 'Inter', ui-sans-serif, system-ui, sans-serif;
-  --font-mono: 'JetBrains Mono', ui-monospace, monospace;
-}
-
-/* Light: clean neutral surfaces, emerald primary */
 :root {
   --radius: 0.5rem;
   --background: oklch(0.99 0.003 286);
   --foreground: oklch(0.22 0.02 285);
   --card: oklch(1 0 0);
   --primary: oklch(0.55 0.15 158);
-  --primary-foreground: oklch(1 0 0);
+  --primary-fg: oklch(1 0 0);
   --secondary: oklch(0.955 0.006 286);
-  --muted: oklch(0.96 0.005 286);
-  --muted-foreground: oklch(0.5 0.02 286);
+  --muted-fg: oklch(0.5 0.02 286);
   --border: oklch(0.9 0.006 286);
-  --destructive: oklch(0.577 0.245 27.325);
-  --warning: oklch(0.65 0.16 70);
+  --danger: oklch(0.577 0.245 27.325);
+  --warning: oklch(0.62 0.16 65);
   --success: oklch(0.55 0.15 158);
-  --info: oklch(0.6 0.13 240);
+  --info: oklch(0.55 0.13 240);
+  --orb-a: oklch(0.55 0.15 158 / 0.10);
+  --orb-b: oklch(0.55 0.13 240 / 0.08);
+  --orb-c: oklch(0.6 0.14 300 / 0.07);
 }
-
-/* Premium dark: cinematic near-black, emerald glow, hairline borders */
-.dark {
+html.dark {
   --background: oklch(0.13 0.005 285);
   --foreground: oklch(0.94 0.004 286);
   --card: oklch(0.17 0.006 285);
-  --primary: oklch(0.7 0.16 158);
-  --primary-foreground: oklch(0.16 0.03 158);
+  --primary: oklch(0.72 0.16 158);
+  --primary-fg: oklch(0.16 0.03 158);
   --secondary: oklch(0.24 0.01 285);
-  --muted: oklch(0.22 0.008 285);
-  --muted-foreground: oklch(0.65 0.015 285);
+  --muted-fg: oklch(0.65 0.015 285);
   --border: oklch(1 0 0 / 8%);
-  --destructive: oklch(0.66 0.2 22);
-  --warning: oklch(0.75 0.15 75);
-  --success: oklch(0.7 0.16 158);
+  --danger: oklch(0.68 0.2 22);
+  --warning: oklch(0.78 0.15 75);
+  --success: oklch(0.72 0.16 158);
   --info: oklch(0.7 0.13 240);
+  --orb-a: oklch(0.72 0.16 158 / 0.16);
+  --orb-b: oklch(0.7 0.13 240 / 0.13);
+  --orb-c: oklch(0.72 0.14 300 / 0.10);
 }
 
-@layer base {
-  * { border-color: var(--border); }
-  body {
-    background: var(--background);
-    color: var(--foreground);
-    font-family: var(--font-sans);
-    -webkit-font-smoothing: antialiased;
-  }
-  ::selection { background: color-mix(in oklch, var(--primary) 30%, transparent); }
-  ::-webkit-scrollbar { width: 10px; height: 10px; }
-  ::-webkit-scrollbar-thumb { background: color-mix(in oklch, var(--foreground) 12%, transparent); border-radius: 6px; border: 3px solid transparent; background-clip: content-box; }
-  ::-webkit-scrollbar-thumb:hover { background: color-mix(in oklch, var(--foreground) 22%, transparent); background-clip: content-box; }
+*, *::before, *::after { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; }
+body {
+  min-height: 100svh;
+  background: var(--background);
+  color: var(--foreground);
+  font-family: 'Inter', ui-sans-serif, system-ui, -apple-system, sans-serif;
+  font-size: 15px;
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
 }
+button, input, textarea { font: inherit; color: inherit; }
+button { cursor: pointer; background: none; border: none; }
+h1, h2, h3, p, ul, li { margin: 0; }
+ul { list-style: none; padding: 0; }
+.mono { font-family: 'JetBrains Mono', ui-monospace, monospace; }
+::selection { background: color-mix(in oklch, var(--primary) 30%, transparent); }
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-thumb { background: color-mix(in oklch, var(--foreground) 14%, transparent); border-radius: 6px; border: 3px solid transparent; background-clip: content-box; }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; }
+.hidden { display: none !important; }
 
-@layer utilities {
-  .bg-card { background-color: var(--card); }
-  .bg-secondary { background-color: var(--secondary); }
-  .bg-muted { background-color: var(--muted); }
-  .bg-primary { background-color: var(--primary); }
-  .text-primary { color: var(--primary); }
-  .text-muted-foreground { color: var(--muted-foreground); }
-  .text-destructive { color: var(--destructive); }
-  .text-warning { color: var(--warning); }
-  .text-success { color: var(--success); }
-  .text-info { color: var(--info); }
-  .border-hair { border-color: var(--border); }
-}
-</style>
-<style>
-/* Floating bokeh orbs -- same organic drift as Aegix, CSS-only here. */
+/* ---------- bokeh ---------- */
+.bokeh { position: fixed; inset: 0; z-index: -1; overflow: hidden; pointer-events: none; }
 .orb { position: absolute; border-radius: 9999px; will-change: transform; }
 @keyframes drift1 { 0%,100% { transform: translate3d(0,0,0);} 33% { transform: translate3d(60px,-45px,0);} 66% { transform: translate3d(-35px,50px,0);} }
 @keyframes drift2 { 0%,100% { transform: translate3d(0,0,0);} 33% { transform: translate3d(-55px,60px,0);} 66% { transform: translate3d(45px,-30px,0);} }
 @keyframes drift3 { 0%,100% { transform: translate3d(0,0,0);} 50% { transform: translate3d(70px,55px,0);} }
-@media (prefers-reduced-motion: reduce) { .orb { animation: none !important; } }
 
-.fade-up { animation: fadeUp .3s cubic-bezier(.16,1,.3,1); }
-@keyframes fadeUp { from { opacity:0; transform: translateY(8px);} to { opacity:1; transform: translateY(0);} }
-@media (prefers-reduced-motion: reduce) { .fade-up { animation: none; } }
+/* ---------- shell ---------- */
+.shell { display: flex; min-height: 100svh; }
 
-.ring-value { transition: stroke-dashoffset 900ms cubic-bezier(.16,1,.3,1); }
-.meter-fill { transition: width 700ms cubic-bezier(.16,1,.3,1); }
-@media (prefers-reduced-motion: reduce) { .ring-value, .meter-fill { transition: none; } }
+.sidebar {
+  position: fixed; inset-block: 0; left: 0; z-index: 50;
+  display: flex; flex-direction: column; width: 17rem;
+  border-right: 1px solid var(--border);
+  background: color-mix(in oklch, var(--card) 55%, transparent);
+  backdrop-filter: blur(16px);
+  transform: translateX(-100%);
+  transition: transform .2s ease;
+}
+.sidebar.open { transform: translateX(0); }
+.scrim { position: fixed; inset: 0; z-index: 40; background: rgba(0,0,0,.5); backdrop-filter: blur(2px); }
+@media (min-width: 768px) {
+  .sidebar { position: sticky; top: 0; height: 100svh; transform: none; z-index: auto; align-self: flex-start; }
+  .scrim { display: none !important; }
+  .only-mobile { display: none !important; }
+}
 
-/* budget rail: one tick per question, filled as the agent spends them */
-.tick { height: 4px; border-radius: 2px; flex: 1; background: color-mix(in oklch, var(--foreground) 12%, transparent); transition: background .3s; }
+.side-head { display: flex; align-items: center; justify-content: space-between; padding: 1rem; }
+.logo-row { display: flex; align-items: center; gap: .5rem; }
+.logo-mark {
+  width: 1.75rem; height: 1.75rem; border-radius: .5rem;
+  display: flex; align-items: center; justify-content: center;
+  font-family: 'JetBrains Mono', monospace; font-size: 12px; font-weight: 700;
+  background: linear-gradient(135deg, var(--primary), color-mix(in oklch, var(--primary) 55%, var(--info)));
+  color: var(--primary-fg);
+}
+.logo-text { font-size: 14px; font-weight: 600; }
+.logo-text span { color: var(--primary); }
+.icon-btn {
+  width: 2.25rem; height: 2.25rem; border-radius: .5rem;
+  display: flex; align-items: center; justify-content: center;
+  color: var(--muted-fg); transition: background .15s, color .15s;
+}
+.icon-btn:hover { background: var(--secondary); color: var(--foreground); }
+
+.btn-primary {
+  display: flex; align-items: center; justify-content: center; gap: .5rem;
+  width: 100%; padding: .55rem .85rem; border-radius: .5rem;
+  background: var(--primary); color: var(--primary-fg);
+  font-size: 14px; font-weight: 500; transition: opacity .15s;
+}
+.btn-primary:hover { opacity: .9; }
+.btn-primary:disabled { opacity: .5; cursor: not-allowed; }
+.btn-outline {
+  flex: 1; padding: .5rem .75rem; border-radius: .5rem;
+  border: 1px solid var(--border); font-size: 14px; transition: background .15s;
+}
+.btn-outline:hover { background: var(--secondary); }
+
+/* ---------- rubric rail (the twist) ---------- */
+.rubric {
+  margin: 1rem .75rem 0; padding: .75rem; border-radius: .75rem;
+  border: 1px solid var(--border);
+  background: color-mix(in oklch, var(--card) 60%, transparent);
+}
+.rubric-head { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: .5rem; }
+.eyebrow { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; color: var(--muted-fg); }
+.rail { display: flex; gap: 3px; margin-bottom: .75rem; }
+.tick { flex: 1; height: 4px; border-radius: 2px; background: color-mix(in oklch, var(--foreground) 12%, transparent); transition: background .3s; }
 .tick.spent { background: color-mix(in oklch, var(--foreground) 45%, transparent); }
 .tick.active { background: var(--primary); box-shadow: 0 0 8px color-mix(in oklch, var(--primary) 60%, transparent); }
+.comp-row { display: flex; align-items: center; gap: .5rem; margin-bottom: .4rem; font-size: 12px; }
+.comp-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; background: color-mix(in oklch, var(--foreground) 25%, transparent); }
+.comp-row.current .comp-dot { background: var(--primary); }
+.comp-row.current .comp-name { color: var(--foreground); }
+.comp-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--muted-fg); }
+.comp-count { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--muted-fg); font-variant-numeric: tabular-nums; }
 
-.typing span { display:inline-block; width:5px; height:5px; border-radius:9999px; background: var(--muted-foreground); animation: blink 1.4s infinite both; }
-.typing span:nth-child(2){ animation-delay:.2s } .typing span:nth-child(3){ animation-delay:.4s }
-@keyframes blink { 0%,80%,100% { opacity:.25 } 40% { opacity:1 } }
+/* ---------- history ---------- */
+.side-nav { flex: 1; overflow-y: auto; padding: 1rem .75rem; }
+.empty-state { margin-top: 1.5rem; text-align: center; font-size: 12px; color: var(--muted-fg); }
+.empty-state svg { display: block; margin: 0 auto .5rem; opacity: .5; }
+.hist-head { display: flex; align-items: center; justify-content: space-between; padding: 0 .5rem; margin-bottom: .25rem; }
+.hist-clear { display: flex; align-items: center; gap: .25rem; font-size: 11px; color: var(--muted-fg); }
+.hist-clear:hover { color: var(--danger); }
+.hist-item {
+  display: flex; align-items: center; gap: .5rem; width: 100%;
+  padding: .5rem; border-radius: .5rem; text-align: left;
+  font-size: 14px; color: var(--muted-fg); transition: background .15s, color .15s;
+}
+.hist-item:hover { background: var(--secondary); color: var(--foreground); }
+.hist-title { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.hist-score { flex-shrink: 0; padding: 1px 6px; border-radius: 999px; font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.side-foot { border-top: 1px solid var(--border); padding: .75rem; font-size: 11px; line-height: 1.5; color: var(--muted-fg); }
+
+/* ---------- main ---------- */
+.main { display: flex; min-width: 0; flex: 1; flex-direction: column; }
+.topbar {
+  position: sticky; top: 0; z-index: 30;
+  display: flex; align-items: center; gap: .75rem;
+  padding: .75rem 1rem; border-bottom: 1px solid var(--border);
+  background: color-mix(in oklch, var(--background) 75%, transparent);
+  backdrop-filter: blur(12px);
+}
+.content { width: 100%; max-width: 48rem; margin: 0 auto; padding: 1.5rem 1rem; flex: 1; display: flex; flex-direction: column; }
+@media (min-width: 640px) { .content { padding-inline: 1.5rem; } }
+
+/* ---------- setup ---------- */
+.setup { display: flex; flex: 1; flex-direction: column; justify-content: center; }
+.hero { text-align: center; margin-bottom: 2rem; }
+.hero h1 { font-size: clamp(1.75rem, 5vw, 2.25rem); font-weight: 600; letter-spacing: -.02em; line-height: 1.2; margin-bottom: .75rem; }
+.hero h1 em { font-style: normal; color: var(--primary); }
+.hero p { max-width: 30rem; margin: 0 auto; font-size: 14px; color: var(--muted-fg); }
+
+.card {
+  border: 1px solid var(--border); border-radius: 1rem; padding: 1.25rem;
+  background: color-mix(in oklch, var(--card) 70%, transparent);
+}
+.field { margin-bottom: 1rem; }
+.field-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: .4rem; }
+label { font-size: 14px; font-weight: 500; }
+.link-btn { display: inline-flex; align-items: center; gap: .25rem; font-size: 12px; color: var(--primary); }
+.link-btn:hover { text-decoration: underline; }
+textarea, input[type="url"] {
+  width: 100%; padding: .5rem .75rem; border-radius: .5rem;
+  border: 1px solid var(--border); background: var(--secondary);
+  font-size: 14px; outline: none; resize: vertical;
+}
+textarea:focus, input[type="url"]:focus { border-color: var(--primary); }
+::placeholder { color: var(--muted-fg); }
+.hint { margin-top: .4rem; font-size: 12px; color: var(--muted-fg); }
+
+details > summary { list-style: none; cursor: pointer; }
+details > summary::-webkit-details-marker { display: none; }
+.disclosure { display: flex; align-items: center; gap: .4rem; font-size: 12px; color: var(--muted-fg); }
+.disclosure:hover { color: var(--foreground); }
+.disclosure svg { transition: transform .2s; }
+details[open] > summary .disclosure svg { transform: rotate(90deg); }
+
+.persona-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: .5rem; }
+.persona {
+  padding: .6rem; border-radius: .5rem; text-align: left;
+  border: 1px solid var(--border); background: var(--secondary);
+  transition: border-color .15s, background .15s;
+}
+.persona:hover { border-color: color-mix(in oklch, var(--primary) 50%, transparent); }
+.persona[aria-pressed="true"] { border-color: var(--primary); background: color-mix(in oklch, var(--primary) 12%, transparent); }
+.persona b { display: block; font-size: 12px; font-weight: 600; }
+.persona span { font-size: 11px; line-height: 1.35; color: var(--muted-fg); }
+
+/* ---------- chat ---------- */
+.transcript { flex: 1; padding-bottom: 1rem; }
+.transcript > * + * { margin-top: 1.25rem; }
+.msg-head { display: flex; align-items: center; gap: .5rem; margin-bottom: .4rem; }
+.msg-avatar {
+  width: 1.25rem; height: 1.25rem; border-radius: .25rem; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  font-family: 'JetBrains Mono', monospace; font-size: 9px; font-weight: 700;
+  background: var(--primary); color: var(--primary-fg);
+}
+.msg-role { font-size: 12px; font-weight: 500; color: var(--muted-fg); }
+.msg-q { font-size: 15px; line-height: 1.6; }
+.row-end { display: flex; justify-content: flex-end; }
+.bubble-a {
+  max-width: 85%; padding: .6rem .85rem;
+  border: 1px solid var(--border); border-radius: 1rem; border-bottom-right-radius: .25rem;
+  background: var(--secondary); font-size: 15px; line-height: 1.6;
+}
+.fb { max-width: 85%; padding: .5rem .75rem; border-radius: .75rem; border: 1px solid; font-size: 13px; line-height: 1.55; }
+.fb-head { display: flex; align-items: center; gap: .35rem; margin-bottom: .25rem; font-weight: 500; font-size: 11px; text-transform: uppercase; letter-spacing: .04em; }
+.fb-note { display: block; margin-top: .25rem; font-size: 11px; color: var(--muted-fg); }
+.typing { display: flex; align-items: center; gap: .5rem; font-size: 12px; color: var(--muted-fg); }
+.typing i { width: 5px; height: 5px; border-radius: 50%; background: var(--muted-fg); animation: blink 1.4s infinite both; }
+.typing i:nth-child(2) { animation-delay: .2s; } .typing i:nth-child(3) { animation-delay: .4s; }
+@keyframes blink { 0%,80%,100% { opacity: .25 } 40% { opacity: 1 } }
+.notice { padding: .5rem .75rem; border-radius: .5rem; border: 1px solid; font-size: 13px; }
+
+/* ---------- composer ---------- */
+.composer-wrap {
+  position: sticky; bottom: 0; border-top: 1px solid var(--border);
+  background: color-mix(in oklch, var(--background) 80%, transparent);
+  backdrop-filter: blur(12px);
+}
+.composer-inner { width: 100%; max-width: 48rem; margin: 0 auto; padding: .75rem 1rem; }
+@media (min-width: 640px) { .composer-inner { padding-inline: 1.5rem; } }
+.composer {
+  display: flex; align-items: flex-end; gap: .5rem;
+  padding: .5rem; border: 1px solid var(--border); border-radius: .75rem; background: var(--card);
+}
+.composer textarea {
+  flex: 1; max-height: 12rem; border: 0; background: transparent;
+  padding: .35rem .5rem; resize: none; outline: none;
+}
+.send-btn {
+  width: 2.25rem; height: 2.25rem; flex-shrink: 0; border-radius: .5rem;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--primary); color: var(--primary-fg); transition: opacity .15s;
+}
+.send-btn:hover { opacity: .9; }
+.send-btn:disabled { opacity: .4; cursor: not-allowed; }
+.composer-meta { display: flex; align-items: center; justify-content: space-between; padding: .35rem .25rem 0; font-size: 11px; color: var(--muted-fg); }
+.composer-meta button:hover { color: var(--foreground); }
+
+/* ---------- report ---------- */
+.report-hero { display: flex; flex-direction: column; align-items: center; gap: 1.25rem; }
+@media (min-width: 640px) { .report-hero { flex-direction: row; gap: 1.75rem; } .report-side { text-align: left; } }
+.ring-wrap { position: relative; width: 8rem; height: 8rem; flex-shrink: 0; }
+.ring-wrap svg { transform: rotate(-90deg); }
+.ring-value { transition: stroke-dashoffset 900ms cubic-bezier(.16,1,.3,1); }
+.ring-center { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+.ring-num { font-family: 'JetBrains Mono', monospace; font-size: 1.75rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+.report-side { flex: 1; min-width: 0; text-align: center; }
+.report-verdict { font-size: 1.125rem; font-weight: 600; margin: .25rem 0 .35rem; }
+.report-summary { font-size: 14px; color: var(--muted-fg); }
+.chips { display: flex; flex-wrap: wrap; gap: .35rem; margin-top: .75rem; justify-content: center; }
+@media (min-width: 640px) { .chips { justify-content: flex-start; } }
+.chip { padding: 1px 8px; border-radius: 999px; border: 1px solid; font-size: 11px; }
+
+.comp-card { padding: 1rem; border: 1px solid var(--border); border-radius: .75rem; background: color-mix(in oklch, var(--card) 55%, transparent); }
+.comp-card + .comp-card { margin-top: .625rem; }
+.comp-card-head { display: flex; align-items: center; justify-content: space-between; gap: .5rem; margin-bottom: .5rem; }
+.comp-card-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 14px; font-weight: 500; }
+.band-pill { padding: 1px 7px; border-radius: 999px; font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; }
+.comp-score { font-family: 'JetBrains Mono', monospace; font-size: 14px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.meter { height: 6px; border-radius: 999px; overflow: hidden; margin-bottom: .625rem; background: color-mix(in oklch, var(--foreground) 10%, transparent); }
+.meter-fill { height: 100%; border-radius: 999px; width: 0; transition: width 700ms cubic-bezier(.16,1,.3,1); }
+.quote { border-left: 2px solid color-mix(in oklch, var(--foreground) 15%, transparent); padding-left: .625rem; font-family: 'JetBrains Mono', monospace; font-size: 12px; line-height: 1.6; color: var(--muted-fg); }
+.model-answer { margin-top: .625rem; }
+.model-answer .disclosure { color: var(--primary); font-weight: 500; }
+.model-answer p { margin-top: .5rem; padding: .625rem; border-radius: .5rem; background: var(--secondary); font-size: 12px; line-height: 1.6; }
+.report-actions { display: flex; gap: .5rem; margin-top: 1rem; padding-bottom: 1.5rem; }
+
+/* ---------- toast ---------- */
+.toast {
+  position: fixed; bottom: 1rem; left: 50%; transform: translateX(-50%); z-index: 100;
+  padding: .625rem 1rem; border-radius: .5rem; border: 1px solid var(--border);
+  background: var(--card); font-size: 14px; box-shadow: 0 10px 30px -10px rgba(0,0,0,.5);
+  max-width: min(90vw, 30rem);
+}
+
+.fade-up { animation: fadeUp .3s cubic-bezier(.16,1,.3,1); }
+@keyframes fadeUp { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+@media (prefers-reduced-motion: reduce) {
+  .fade-up, .orb { animation: none !important; }
+  .ring-value, .meter-fill { transition: none; }
+}
 </style>
 </head>
-<body class="antialiased">
+<body>
 
-<!-- bokeh field -->
-<div aria-hidden="true" class="pointer-events-none fixed inset-0 -z-10 overflow-hidden">
-  <div class="orb" style="left:6%;top:10%;width:380px;height:380px;background:oklch(0.7 0.16 158 / 0.16);filter:blur(76px);animation:drift1 34s ease-in-out infinite"></div>
-  <div class="orb" style="left:78%;top:4%;width:300px;height:300px;background:oklch(0.7 0.13 240 / 0.13);filter:blur(60px);animation:drift2 41s ease-in-out infinite"></div>
-  <div class="orb" style="left:66%;top:64%;width:420px;height:420px;background:oklch(0.7 0.16 158 / 0.12);filter:blur(84px);animation:drift3 47s ease-in-out infinite"></div>
-  <div class="orb hidden sm:block" style="left:20%;top:76%;width:240px;height:240px;background:oklch(0.72 0.14 300 / 0.10);filter:blur(48px);animation:drift2 38s ease-in-out infinite"></div>
+<div class="bokeh" aria-hidden="true">
+  <div class="orb" style="left:6%;top:10%;width:380px;height:380px;background:var(--orb-a);filter:blur(76px);animation:drift1 34s ease-in-out infinite"></div>
+  <div class="orb" style="left:74%;top:4%;width:300px;height:300px;background:var(--orb-b);filter:blur(60px);animation:drift2 41s ease-in-out infinite"></div>
+  <div class="orb" style="left:62%;top:62%;width:420px;height:420px;background:var(--orb-a);filter:blur(84px);animation:drift3 47s ease-in-out infinite"></div>
+  <div class="orb" style="left:18%;top:74%;width:240px;height:240px;background:var(--orb-c);filter:blur(48px);animation:drift2 38s ease-in-out infinite"></div>
 </div>
 
-<div class="flex min-h-svh">
+<div class="shell">
 
-  <!-- ============ SIDEBAR ============ -->
-  <div id="sidebar-scrim" class="fixed inset-0 z-40 bg-black/50 backdrop-blur-sm hidden md:hidden"></div>
-  <aside id="sidebar"
-    class="fixed inset-y-0 left-0 z-50 flex w-72 flex-col border-r border-hair backdrop-blur-xl transition-transform duration-200 -translate-x-full
-           md:sticky md:top-0 md:z-auto md:h-svh md:translate-x-0 md:self-start"
-    style="background: color-mix(in oklch, var(--card) 45%, transparent);">
-
-    <div class="flex items-center justify-between px-4 py-4">
-      <div class="flex items-center gap-2">
-        <div class="flex size-7 items-center justify-center rounded-lg font-mono text-[13px] font-bold"
-             style="background:linear-gradient(135deg, var(--primary), color-mix(in oklch, var(--primary) 55%, var(--info)));color:var(--primary-foreground)">&gt;_</div>
-        <span class="text-sm font-semibold">callback<span class="text-primary">-ai</span></span>
+  <div class="scrim hidden" id="scrim"></div>
+  <aside class="sidebar" id="sidebar">
+    <div class="side-head">
+      <div class="logo-row">
+        <div class="logo-mark" aria-hidden="true">&gt;_</div>
+        <div class="logo-text">callback<span>-ai</span></div>
       </div>
-      <div class="flex items-center gap-1">
-        <button id="theme-toggle" class="flex size-9 items-center justify-center rounded-lg text-muted-foreground hover:text-[var(--foreground)] hover:bg-secondary transition-colors" aria-label="Toggle theme">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+      <div style="display:flex;gap:2px">
+        <button class="icon-btn" id="theme-toggle" aria-label="Toggle theme">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
         </button>
-        <button id="sidebar-close" class="flex size-9 items-center justify-center rounded-lg text-muted-foreground md:hidden" aria-label="Close sidebar">
+        <button class="icon-btn only-mobile" id="sidebar-close" aria-label="Close sidebar">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
         </button>
       </div>
     </div>
 
-    <div class="px-3">
-      <button id="new-session-btn" class="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-opacity hover:opacity-90"
-              style="background:var(--primary);color:var(--primary-foreground)">
+    <div style="padding:0 .75rem">
+      <button class="btn-primary" id="new-session-btn">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
         New interview
       </button>
     </div>
 
-    <!-- THE TWIST: live rubric rail. A generic chat UI has no idea what it's
-         spending its turns on; this agent budgets 12 questions across weighted
-         competencies, so the sidebar shows that allocation happening live. -->
-    <div id="rubric-panel" class="mx-3 mt-4 rounded-xl border border-hair p-3 hidden" style="background: color-mix(in oklch, var(--card) 60%, transparent)">
-      <div class="mb-2 flex items-baseline justify-between">
-        <span class="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Question budget</span>
-        <span class="font-mono text-[11px] text-muted-foreground"><span id="budget-used">0</span>/<span id="budget-total">12</span></span>
+    <!-- THE TWIST: a generic chat UI has no concept of a question budget.
+         This agent allocates 12 questions across weighted competencies and
+         re-decides after every answer, so the sidebar shows it happening. -->
+    <div class="rubric hidden" id="rubric-panel">
+      <div class="rubric-head">
+        <span class="eyebrow">Question budget</span>
+        <span class="mono" style="font-size:11px;color:var(--muted-fg)"><span id="budget-used">0</span>/<span id="budget-total">12</span></span>
       </div>
-      <div id="budget-rail" class="mb-3 flex gap-1"></div>
-      <div class="mb-1.5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Competencies</div>
-      <ul id="competency-list" class="space-y-1.5"></ul>
+      <div class="rail" id="budget-rail"></div>
+      <div class="eyebrow" style="margin-bottom:.4rem">Competencies</div>
+      <ul id="competency-list"></ul>
     </div>
 
-    <nav class="mt-4 flex-1 overflow-y-auto px-3 pb-4">
-      <div id="history-empty" class="mt-6 px-2 text-center text-xs text-muted-foreground">
-        <svg class="mx-auto mb-2 opacity-50" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M8 2v4M16 2v4M3 10h18"/><rect x="3" y="4" width="18" height="18" rx="2"/></svg>
+    <nav class="side-nav">
+      <div class="empty-state" id="history-empty">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M8 2v4M16 2v4M3 10h18"/><rect x="3" y="4" width="18" height="18" rx="2"/></svg>
         No sessions yet. Run one to see it here.
       </div>
-      <div id="history-wrap" class="hidden">
-        <div class="mb-1 flex items-center justify-between px-2">
-          <span class="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">History</span>
-          <button id="clear-history" class="-m-1.5 flex items-center gap-1 p-1.5 text-[11px] text-muted-foreground hover:text-destructive transition-colors">
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/></svg>
+      <div class="hidden" id="history-wrap">
+        <div class="hist-head">
+          <span class="eyebrow">History</span>
+          <button class="hist-clear" id="clear-history">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/></svg>
             Clear
           </button>
         </div>
-        <ul id="history-list" class="space-y-0.5"></ul>
+        <ul id="history-list"></ul>
       </div>
     </nav>
 
-    <div class="border-t border-hair p-3 text-[11px] leading-relaxed text-muted-foreground">
-      Practice tool — scores are an LLM's read of your answers, not a hiring decision.
-    </div>
+    <div class="side-foot">Practice tool — scores are an LLM's read of your answers, not a hiring decision.</div>
   </aside>
 
-  <!-- ============ MAIN ============ -->
-  <div class="flex min-w-0 flex-1 flex-col">
-    <header class="sticky top-0 z-30 flex items-center gap-3 border-b border-hair px-4 py-3 backdrop-blur-md md:hidden"
-            style="background: color-mix(in oklch, var(--background) 70%, transparent)">
-      <button id="sidebar-open" class="-ml-2 flex size-10 items-center justify-center rounded-lg text-muted-foreground" aria-label="Open menu">
+  <div class="main">
+    <header class="topbar only-mobile">
+      <button class="icon-btn" id="sidebar-open" aria-label="Open menu" style="margin-left:-.5rem">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
       </button>
-      <span class="text-sm font-semibold">callback<span class="text-primary">-ai</span></span>
+      <div class="logo-text">callback<span>-ai</span></div>
     </header>
 
-    <main class="mx-auto flex w-full max-w-3xl flex-1 flex-col px-4 py-6 sm:px-6">
-
-      <!-- ===== SETUP (empty state) ===== -->
-      <section id="screen-setup" class="flex flex-1 flex-col justify-center fade-up">
-        <div class="mb-8 text-center">
-          <h1 class="mb-3 text-3xl font-semibold tracking-tight sm:text-4xl">
-            An interviewer that<br class="hidden sm:block"> actually <span class="text-primary">follows up</span>.
-          </h1>
-          <p class="mx-auto max-w-md text-sm text-muted-foreground">
-            Paste a role and your background. It derives a rubric, spends 12 questions where
-            you're weakest, and cites a verbatim quote for every score.
-          </p>
+    <main class="content">
+      <!-- ===== SETUP ===== -->
+      <section class="setup fade-up" id="screen-setup">
+        <div class="hero">
+          <h1>An interviewer that<br>actually <em>follows up</em>.</h1>
+          <p>Paste a role and your background. It derives a rubric, spends 12 questions where you're weakest, and cites a verbatim quote for every score.</p>
         </div>
 
-        <form id="setup-form" class="rounded-2xl border border-hair p-4 sm:p-5" style="background: color-mix(in oklch, var(--card) 70%, transparent)" novalidate>
-          <div class="mb-4">
-            <div class="mb-1.5 flex items-center justify-between">
-              <label for="job-post" class="text-sm font-medium">Job post</label>
-              <button type="button" id="fill-sample" class="flex items-center gap-1 text-xs text-primary hover:underline">
+        <form class="card" id="setup-form" novalidate>
+          <div class="field">
+            <div class="field-head">
+              <label for="job-post">Job post</label>
+              <button type="button" class="link-btn" id="fill-sample">
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
                 Use a sample
               </button>
             </div>
-            <textarea id="job-post" rows="4" required placeholder="Paste the job posting text"
-              class="w-full resize-y rounded-lg border border-hair bg-secondary px-3 py-2 text-sm outline-none placeholder:text-muted-foreground focus:border-[var(--primary)]"></textarea>
+            <textarea id="job-post" rows="4" required placeholder="Paste the job posting text"></textarea>
           </div>
 
-          <details class="mb-4 group">
-            <summary class="cursor-pointer list-none text-xs text-muted-foreground hover:text-[var(--foreground)] flex items-center gap-1.5">
-              <svg class="transition-transform group-open:rotate-90" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="m9 18 6-6-6-6"/></svg>
+          <details class="field">
+            <summary><span class="disclosure">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="m9 18 6-6-6-6"/></svg>
               Add your background (optional, makes probes specific to you)
-            </summary>
-            <div class="mt-3 space-y-3">
-              <div>
-                <label for="resume" class="mb-1.5 block text-sm font-medium">Resume</label>
-                <textarea id="resume" rows="3" placeholder="Paste resume text"
-                  class="w-full resize-y rounded-lg border border-hair bg-secondary px-3 py-2 text-sm outline-none placeholder:text-muted-foreground focus:border-[var(--primary)]"></textarea>
+            </span></summary>
+            <div style="margin-top:.75rem">
+              <div class="field">
+                <label for="resume" style="display:block;margin-bottom:.4rem">Resume</label>
+                <textarea id="resume" rows="3" placeholder="Paste resume text"></textarea>
               </div>
-              <div>
-                <label for="portfolio-link" class="mb-1.5 block text-sm font-medium">Portfolio link</label>
-                <input id="portfolio-link" type="url" placeholder="https://your-portfolio.example"
-                  class="w-full rounded-lg border border-hair bg-secondary px-3 py-2 text-sm outline-none placeholder:text-muted-foreground focus:border-[var(--primary)]">
-                <p class="mt-1.5 text-xs text-muted-foreground">Best-effort text extraction; JS-only sites may not parse.</p>
+              <div style="margin-bottom:0">
+                <label for="portfolio-link" style="display:block;margin-bottom:.4rem">Portfolio link</label>
+                <input id="portfolio-link" type="url" placeholder="https://your-portfolio.example">
+                <p class="hint">Best-effort text extraction; JS-only sites may not parse.</p>
               </div>
             </div>
           </details>
 
-          <div class="mb-4">
-            <div class="mb-2 text-sm font-medium">Interviewer</div>
-            <div class="grid grid-cols-3 gap-2" role="group" aria-label="Interviewer persona">
-              <button type="button" class="persona-card rounded-lg border border-hair bg-secondary p-2.5 text-left transition-colors" data-persona="friendly" aria-pressed="false">
-                <span class="block text-xs font-semibold">Friendly</span>
-                <span class="text-[11px] leading-tight text-muted-foreground">Softer follow-ups</span>
+          <div class="field">
+            <label style="display:block;margin-bottom:.5rem">Interviewer</label>
+            <div class="persona-grid" role="group" aria-label="Interviewer persona">
+              <button type="button" class="persona" data-persona="friendly" aria-pressed="false">
+                <b>Friendly</b><span>Softer follow-ups</span>
               </button>
-              <button type="button" class="persona-card rounded-lg border p-2.5 text-left transition-colors" data-persona="neutral" aria-pressed="true">
-                <span class="block text-xs font-semibold">Neutral</span>
-                <span class="text-[11px] leading-tight text-muted-foreground">Standard probing</span>
+              <button type="button" class="persona" data-persona="neutral" aria-pressed="true">
+                <b>Neutral</b><span>Standard probing</span>
               </button>
-              <button type="button" class="persona-card rounded-lg border border-hair bg-secondary p-2.5 text-left transition-colors" data-persona="adversarial" aria-pressed="false">
-                <span class="block text-xs font-semibold">Adversarial</span>
-                <span class="text-[11px] leading-tight text-muted-foreground">Presses on numbers</span>
+              <button type="button" class="persona" data-persona="adversarial" aria-pressed="false">
+                <b>Adversarial</b><span>Presses on numbers</span>
               </button>
             </div>
           </div>
 
-          <button type="submit" id="start-btn"
-            class="flex w-full items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-medium transition-opacity hover:opacity-90 disabled:opacity-50"
-            style="background:var(--primary);color:var(--primary-foreground)">
-            <span id="start-btn-label">Start interview</span>
-          </button>
-          <p class="mt-2.5 text-center text-[11px] text-muted-foreground">12 questions · ~10–15 min · runs against your own API key</p>
+          <button type="submit" class="btn-primary" id="start-btn"><span id="start-btn-label">Start interview</span></button>
+          <p class="hint" style="text-align:center;margin-top:.6rem">12 questions · ~10–15 min · runs against your own API key</p>
         </form>
       </section>
 
       <!-- ===== CHAT ===== -->
-      <section id="screen-chat" class="hidden flex-1 flex-col">
-        <div id="transcript" class="flex-1 space-y-5 pb-4"></div>
+      <section class="hidden" id="screen-chat" style="flex:1;flex-direction:column">
+        <div class="transcript" id="transcript"></div>
       </section>
     </main>
 
-    <!-- composer -->
-    <div id="composer-wrap" class="sticky bottom-0 hidden border-t border-hair backdrop-blur-md"
-         style="background: color-mix(in oklch, var(--background) 78%, transparent)">
-      <div class="mx-auto w-full max-w-3xl px-4 py-3 sm:px-6">
-        <form id="answer-form" class="flex items-end gap-2 rounded-xl border border-hair p-2" style="background:var(--card)">
+    <div class="composer-wrap hidden" id="composer-wrap">
+      <div class="composer-inner">
+        <form class="composer" id="answer-form">
           <label for="answer-input" class="sr-only">Your answer</label>
-          <textarea id="answer-input" rows="1" placeholder="Answer the question… (Enter to send · Shift+Enter for newline)"
-            class="max-h-48 flex-1 resize-none bg-transparent px-2 py-1.5 text-sm outline-none placeholder:text-muted-foreground"></textarea>
-          <button type="submit" id="send-btn" aria-label="Send answer"
-            class="flex size-9 shrink-0 items-center justify-center rounded-lg transition-opacity hover:opacity-90 disabled:opacity-40"
-            style="background:var(--primary);color:var(--primary-foreground)">
-            <svg id="send-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2 11 13"/><path d="M22 2 15 22l-4-9-9-4 20-7Z"/></svg>
+          <textarea id="answer-input" rows="1" placeholder="Answer the question… (Enter to send · Shift+Enter for newline)"></textarea>
+          <button type="submit" class="send-btn" id="send-btn" aria-label="Send answer">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2 11 13"/><path d="M22 2 15 22l-4-9-9-4 20-7Z"/></svg>
           </button>
         </form>
-        <div class="mt-1.5 flex items-center justify-between px-1">
-          <button type="button" id="skip-btn" class="text-[11px] text-muted-foreground hover:text-[var(--foreground)] transition-colors">Not sure — skip this one</button>
-          <span id="word-count" class="font-mono text-[11px] tabular-nums text-muted-foreground"></span>
+        <div class="composer-meta">
+          <button type="button" id="skip-btn">Not sure — skip this one</button>
+          <span class="mono" id="word-count"></span>
         </div>
       </div>
     </div>
   </div>
 </div>
 
-<!-- toast -->
-<div id="toast" class="fixed bottom-4 left-1/2 z-[100] hidden -translate-x-1/2 rounded-lg border border-hair px-4 py-2.5 text-sm shadow-xl" style="background:var(--card)" role="alert"></div>
+<div class="toast hidden" id="toast" role="alert"></div>
 
 <script>
 const API = "/api";
 const HISTORY_KEY = "callback-ai-history";
 const state = { sessionId: null, persona: "neutral", competencies: [], budget: 12, turn: 0, spend: {}, report: null };
-
 const $ = (id) => document.getElementById(id);
 const els = {
   transcript: $("transcript"), answerInput: $("answer-input"), answerForm: $("answer-form"),
@@ -320,39 +506,30 @@ $("theme-toggle").onclick = () =>
   applyTheme(document.documentElement.classList.contains("dark") ? "light" : "dark");
 
 // ---------- sidebar (mobile) ----------
-const sidebar = $("sidebar"), scrim = $("sidebar-scrim");
 function openSidebar(o) {
-  sidebar.classList.toggle("-translate-x-full", !o);
-  scrim.classList.toggle("hidden", !o);
+  $("sidebar").classList.toggle("open", o);
+  $("scrim").classList.toggle("hidden", !o);
 }
 $("sidebar-open").onclick = () => openSidebar(true);
 $("sidebar-close").onclick = () => openSidebar(false);
-scrim.onclick = () => openSidebar(false);
+$("scrim").onclick = () => openSidebar(false);
 
 // ---------- toast ----------
 let toastTimer;
 function toast(msg, isError) {
   const t = $("toast");
   t.textContent = msg;
-  t.style.borderColor = isError ? "var(--destructive)" : "var(--border)";
+  t.style.borderColor = isError ? "var(--danger)" : "var(--border)";
   t.classList.remove("hidden");
   clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => t.classList.add("hidden"), 4500);
+  toastTimer = setTimeout(() => t.classList.add("hidden"), 5000);
 }
 
 // ---------- persona ----------
-function paintPersona(card, on) {
-  card.setAttribute("aria-pressed", String(on));
-  card.style.borderColor = on ? "var(--primary)" : "";
-  card.style.background = on ? "color-mix(in oklch, var(--primary) 12%, transparent)" : "";
-  if (!on) { card.classList.add("border-hair", "bg-secondary"); }
-  else { card.classList.remove("border-hair", "bg-secondary"); }
-}
-document.querySelectorAll(".persona-card").forEach((card) => {
-  if (card.dataset.persona === "neutral") paintPersona(card, true);
+document.querySelectorAll(".persona").forEach((card) => {
   card.onclick = () => {
-    document.querySelectorAll(".persona-card").forEach((c) => paintPersona(c, false));
-    paintPersona(card, true);
+    document.querySelectorAll(".persona").forEach((c) => c.setAttribute("aria-pressed", "false"));
+    card.setAttribute("aria-pressed", "true");
     state.persona = card.dataset.persona;
   };
 });
@@ -392,10 +569,14 @@ $("fill-sample").onclick = () => {
   toast("Sample role and resume loaded.");
 };
 
-// ---------- history (localStorage, like Aegix) ----------
+// ---------- history ----------
 const loadHistory = () => { try { return JSON.parse(localStorage.getItem(HISTORY_KEY)) || []; } catch { return []; } };
-function saveHistory(items) { localStorage.setItem(HISTORY_KEY, JSON.stringify(items.slice(0, 30))); renderHistory(); }
-function addHistory(entry) { saveHistory([entry, ...loadHistory()]); }
+function addHistory(entry) {
+  localStorage.setItem(HISTORY_KEY, JSON.stringify([entry, ...loadHistory()].slice(0, 30)));
+  renderHistory();
+}
+function bandColor(s) { return s >= 0.7 ? "var(--success)" : s >= 0.5 ? "var(--warning)" : "var(--danger)"; }
+function bandLabel(s) { return s >= 0.7 ? "strong" : s >= 0.5 ? "developing" : "needs work"; }
 
 function renderHistory() {
   const items = loadHistory();
@@ -405,19 +586,20 @@ function renderHistory() {
   list.innerHTML = "";
   items.forEach((item) => {
     const li = document.createElement("li");
-    li.innerHTML = `<button class="group flex w-full items-center gap-2 rounded-lg px-2 py-2 text-left text-sm text-muted-foreground transition-colors hover:bg-secondary">
-      <svg class="size-3.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg>
-      <span class="min-w-0 flex-1 truncate">${item.title}</span>
-      <span class="shrink-0 rounded-full px-1.5 py-0.5 font-mono text-[10px] font-semibold tabular-nums"
-            style="background:color-mix(in oklch, ${bandColor(item.score)} 18%, transparent);color:${bandColor(item.score)}">${item.score.toFixed(2)}</span>
-    </button>`;
-    li.querySelector("button").onclick = () => { renderReportFromHistory(item); openSidebar(false); };
+    const btn = document.createElement("button");
+    btn.className = "hist-item";
+    btn.innerHTML = `<svg width="14" height="14" style="flex-shrink:0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg>
+      <span class="hist-title"></span>
+      <span class="hist-score" style="background:color-mix(in oklch, ${bandColor(item.score)} 18%, transparent);color:${bandColor(item.score)}">${item.score.toFixed(2)}</span>`;
+    btn.querySelector(".hist-title").textContent = item.title;
+    btn.onclick = () => { renderReportFromHistory(item); openSidebar(false); };
+    li.appendChild(btn);
     list.appendChild(li);
   });
 }
 $("clear-history").onclick = () => { localStorage.removeItem(HISTORY_KEY); renderHistory(); toast("History cleared."); };
 
-// ---------- rubric rail (the twist) ----------
+// ---------- rubric rail ----------
 function renderRubricPanel() {
   $("rubric-panel").classList.remove("hidden");
   $("budget-total").textContent = state.budget;
@@ -434,14 +616,11 @@ function renderRubricPanel() {
   const list = $("competency-list");
   list.innerHTML = "";
   state.competencies.forEach((name) => {
-    const spent = state.spend[name] || 0;
-    const isCurrent = name === state.currentCompetency;
     const li = document.createElement("li");
-    li.innerHTML = `<div class="flex items-center gap-2">
-      <span class="size-1.5 shrink-0 rounded-full" style="background:${isCurrent ? "var(--primary)" : "color-mix(in oklch, var(--foreground) 25%, transparent)"}"></span>
-      <span class="min-w-0 flex-1 truncate text-xs ${isCurrent ? "" : "text-muted-foreground"}" title="${name}">${name}</span>
-      <span class="font-mono text-[10px] tabular-nums text-muted-foreground">${spent}</span>
-    </div>`;
+    li.className = "comp-row" + (name === state.currentCompetency ? " current" : "");
+    li.innerHTML = `<span class="comp-dot"></span><span class="comp-name"></span><span class="comp-count">${state.spend[name] || 0}</span>`;
+    const n = li.querySelector(".comp-name");
+    n.textContent = name; n.title = name;
     list.appendChild(li);
   });
 }
@@ -450,69 +629,57 @@ function renderRubricPanel() {
 function bubbleQuestion(text) {
   const div = document.createElement("div");
   div.className = "fade-up";
-  div.innerHTML = `<div class="mb-1.5 flex items-center gap-2">
-      <div class="flex size-5 items-center justify-center rounded font-mono text-[10px] font-bold" style="background:var(--primary);color:var(--primary-foreground)">&gt;_</div>
-      <span class="text-xs font-medium text-muted-foreground">Interviewer</span>
-    </div>
-    <div class="text-[15px] leading-relaxed"></div>`;
-  div.querySelector("div:last-child").textContent = text;
+  div.innerHTML = `<div class="msg-head"><div class="msg-avatar">&gt;_</div><span class="msg-role">Interviewer</span></div><div class="msg-q"></div>`;
+  div.querySelector(".msg-q").textContent = text;
   els.transcript.appendChild(div);
   div.scrollIntoView({ behavior: "smooth", block: "end" });
   return div;
 }
-
 function bubbleAnswer(text) {
   const div = document.createElement("div");
-  div.className = "fade-up flex justify-end";
-  div.innerHTML = `<div class="max-w-[85%] rounded-2xl rounded-br-sm border border-hair px-3.5 py-2.5 text-[15px] leading-relaxed" style="background:var(--secondary)"></div>`;
-  div.querySelector("div").textContent = text;
+  div.className = "fade-up row-end";
+  div.innerHTML = `<div class="bubble-a"></div>`;
+  div.querySelector(".bubble-a").textContent = text;
   els.transcript.appendChild(div);
   div.scrollIntoView({ behavior: "smooth", block: "end" });
   return div;
 }
-
 function typingIndicator(on) {
   const old = $("typing");
   if (old) old.remove();
   if (!on) return;
   const div = document.createElement("div");
   div.id = "typing";
-  div.innerHTML = `<div class="flex items-center gap-2 text-xs text-muted-foreground">
-    <span class="typing flex gap-1"><span></span><span></span><span></span></span>
-    scoring your answer &amp; choosing the next question…
-  </div>`;
+  div.innerHTML = `<div class="typing"><i></i><i></i><i></i> scoring your answer &amp; choosing the next question…</div>`;
   els.transcript.appendChild(div);
   div.scrollIntoView({ behavior: "smooth", block: "end" });
 }
-
 const VERDICT = {
-  correct:    { color: "var(--success)",     icon: '<path d="M20 6 9 17l-5-5"/>' },
-  partial:    { color: "var(--warning)",     icon: '<path d="M12 9v4M12 17h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/>' },
-  incomplete: { color: "var(--destructive)", icon: '<circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/>' },
+  correct:    { color: "var(--success)", icon: '<path d="M20 6 9 17l-5-5"/>' },
+  partial:    { color: "var(--warning)", icon: '<path d="M12 9v4M12 17h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/>' },
+  incomplete: { color: "var(--danger)",  icon: '<circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/>' },
 };
-
 function bubbleFeedback(feedbackText, lowConfidence) {
   const m = feedbackText.match(/\[(\w+)\]\s*(.*)/);
   const verdict = m ? m[1] : "partial";
   const message = m ? m[2] : feedbackText;
   const v = VERDICT[verdict] || VERDICT.partial;
-
   const div = document.createElement("div");
-  div.className = "fade-up flex justify-end";
-  div.innerHTML = `<div class="max-w-[85%] rounded-xl border px-3 py-2 text-[13px] leading-relaxed" style="border-color:color-mix(in oklch, ${v.color} 40%, transparent);background:color-mix(in oklch, ${v.color} 8%, transparent)">
-      <div class="mb-1 flex items-center gap-1.5 font-medium" style="color:${v.color}">
+  div.className = "fade-up row-end";
+  div.innerHTML = `<div class="fb" style="border-color:color-mix(in oklch, ${v.color} 40%, transparent);background:color-mix(in oklch, ${v.color} 8%, transparent)">
+      <div class="fb-head" style="color:${v.color}">
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">${v.icon}</svg>
-        <span class="uppercase tracking-wide text-[11px]">${verdict}</span>
+        ${verdict}
       </div>
       <span class="msg"></span>
-      ${lowConfidence ? '<span class="mt-1 block text-[11px] text-muted-foreground">Low confidence — could not verify this against your answer.</span>' : ""}
+      ${lowConfidence ? '<span class="fb-note">Low confidence — could not verify this against your answer.</span>' : ""}
     </div>`;
   div.querySelector(".msg").textContent = message;
   els.transcript.appendChild(div);
   div.scrollIntoView({ behavior: "smooth", block: "end" });
 }
 
-// ---------- start session ----------
+// ---------- start ----------
 $("setup-form").addEventListener("submit", async (e) => {
   e.preventDefault();
   const jobPost = $("job-post").value.trim();
@@ -546,13 +713,13 @@ $("setup-form").addEventListener("submit", async (e) => {
 
     els.setup.classList.add("hidden");
     els.chat.classList.remove("hidden");
-    els.chat.classList.add("flex");
+    els.chat.style.display = "flex";
     els.composer.classList.remove("hidden");
     els.transcript.innerHTML = "";
 
     if (data.conflicts) {
       const n = document.createElement("div");
-      n.className = "rounded-lg border px-3 py-2 text-[13px]";
+      n.className = "notice";
       n.style.cssText = "border-color:color-mix(in oklch, var(--warning) 40%, transparent);background:color-mix(in oklch, var(--warning) 8%, transparent)";
       n.textContent = `${data.conflicts} conflicting claim(s) between your resume and portfolio — fair game for follow-ups.`;
       els.transcript.appendChild(n);
@@ -576,7 +743,7 @@ els.answerForm.addEventListener("submit", async (e) => {
   const answer = els.answerInput.value.trim();
   if (!answer || !state.sessionId) return;
 
-  // Text stays put until the request succeeds — a failure used to eat the answer.
+  // Text stays in the box until the request succeeds — a failure used to eat it.
   const pending = bubbleAnswer(answer);
   els.sendBtn.disabled = true;
   els.answerInput.disabled = true;
@@ -632,7 +799,6 @@ $("skip-btn").onclick = () => {
   els.answerInput.value = "I don't have experience with this yet.";
   els.answerForm.requestSubmit();
 };
-
 $("new-session-btn").onclick = () => {
   if (state.sessionId && !state.report && !confirm("Leave this interview? Progress will be lost.")) return;
   location.reload();
@@ -642,26 +808,28 @@ window.addEventListener("beforeunload", (e) => {
 });
 
 // ---------- report ----------
-function bandColor(s) { return s >= 0.7 ? "var(--success)" : s >= 0.5 ? "var(--warning)" : "var(--destructive)"; }
-function bandLabel(s) { return s >= 0.7 ? "strong" : s >= 0.5 ? "developing" : "needs work"; }
-
 async function loadReport() {
   const resp = await fetch(`${API}/sessions/${state.sessionId}/report`);
   if (!resp.ok) { toast("Could not load the report.", true); return; }
   const data = await resp.json();
   renderReport(data.report);
-
-  const overall = data.report.competency_reports.reduce((s, r) => s + r.score, 0) / (data.report.competency_reports.length || 1);
-  addHistory({ id: state.sessionId, title: state.jobTitle || "Interview session", score: overall, report: data.report, at: Date.now() });
+  const rs = data.report.competency_reports;
+  addHistory({
+    id: state.sessionId, title: state.jobTitle || "Interview session",
+    score: rs.reduce((s, r) => s + r.score, 0) / (rs.length || 1),
+    report: data.report, at: Date.now(),
+  });
 }
 
 function renderReportFromHistory(item) {
   els.setup.classList.add("hidden");
-  els.chat.classList.remove("hidden"); els.chat.classList.add("flex");
+  els.chat.classList.remove("hidden");
+  els.chat.style.display = "flex";
   els.composer.classList.add("hidden");
   $("rubric-panel").classList.add("hidden");
   els.transcript.innerHTML = "";
-  state.sessionId = null; state.report = item.report;
+  state.sessionId = null;
+  state.report = item.report;
   renderReport(item.report);
 }
 
@@ -672,59 +840,58 @@ function renderReport(report) {
   const C = 2 * Math.PI * 54;
 
   const card = document.createElement("div");
-  card.className = "fade-up mt-6 rounded-2xl border border-hair p-5 sm:p-6";
-  card.style.background = "color-mix(in oklch, var(--card) 70%, transparent)";
+  card.className = "card fade-up";
+  card.style.marginTop = "1.5rem";
   card.innerHTML = `
-    <div class="flex flex-col items-center gap-5 sm:flex-row sm:gap-7">
-      <div class="relative size-32 shrink-0" role="img" aria-label="Overall readiness ${overall.toFixed(2)} out of 1.00">
-        <svg width="128" height="128" viewBox="0 0 128 128" style="transform:rotate(-90deg)" aria-hidden="true">
+    <div class="report-hero">
+      <div class="ring-wrap" role="img" aria-label="Overall readiness ${overall.toFixed(2)} out of 1.00">
+        <svg width="128" height="128" viewBox="0 0 128 128" aria-hidden="true">
           <circle cx="64" cy="64" r="54" fill="none" stroke-width="10" stroke="color-mix(in oklch, var(--foreground) 10%, transparent)"/>
           <circle id="ring" class="ring-value" cx="64" cy="64" r="54" fill="none" stroke-width="10" stroke-linecap="round"
                   stroke="${bandColor(overall)}" stroke-dasharray="${C}" stroke-dashoffset="${C}"/>
         </svg>
-        <div class="absolute inset-0 flex flex-col items-center justify-center">
-          <span class="font-mono text-3xl font-bold tabular-nums">${overall.toFixed(2)}</span>
-          <span class="text-[11px] text-muted-foreground">/ 1.00</span>
+        <div class="ring-center">
+          <span class="ring-num">${overall.toFixed(2)}</span>
+          <span style="font-size:11px;color:var(--muted-fg)">/ 1.00</span>
         </div>
       </div>
-      <div class="min-w-0 flex-1 text-center sm:text-left">
-        <div class="mb-1 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Session report</div>
-        <div class="mb-1.5 text-lg font-semibold">${overall >= 0.7 ? "Interview-ready" : overall >= 0.5 ? "Getting there" : "Needs more prep"}</div>
-        <p class="text-sm text-muted-foreground">${report.overall_summary || ""}</p>
-        ${report.top_fixes?.length ? `<div class="mt-3 flex flex-wrap justify-center gap-1.5 sm:justify-start">
-          ${report.top_fixes.map((f) => `<span class="rounded-full border px-2 py-0.5 text-[11px]" style="border-color:color-mix(in oklch, var(--warning) 40%, transparent);color:var(--warning)">${f}</span>`).join("")}
-        </div>` : ""}
+      <div class="report-side">
+        <div class="eyebrow">Session report</div>
+        <div class="report-verdict">${overall >= 0.7 ? "Interview-ready" : overall >= 0.5 ? "Getting there" : "Needs more prep"}</div>
+        <p class="report-summary"></p>
+        ${report.top_fixes && report.top_fixes.length ? `<div class="chips">${report.top_fixes.map((f) =>
+          `<span class="chip" style="border-color:color-mix(in oklch, var(--warning) 40%, transparent);color:var(--warning)"></span>`).join("")}</div>` : ""}
       </div>
     </div>`;
+  card.querySelector(".report-summary").textContent = report.overall_summary || "";
+  card.querySelectorAll(".chip").forEach((el, i) => { el.textContent = report.top_fixes[i]; });
   els.transcript.appendChild(card);
 
   const list = document.createElement("div");
-  list.className = "mt-4 space-y-2.5";
+  list.style.marginTop = "1rem";
   reports.forEach((r) => {
     const pct = Math.round(r.score * 100);
     const item = document.createElement("div");
-    item.className = "rounded-xl border border-hair p-4";
-    item.style.background = "color-mix(in oklch, var(--card) 55%, transparent)";
+    item.className = "comp-card";
     item.innerHTML = `
-      <div class="mb-2 flex items-center justify-between gap-2">
-        <span class="min-w-0 flex-1 truncate text-sm font-medium">${r.competency}</span>
-        <span class="rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide"
-              style="background:color-mix(in oklch, ${bandColor(r.score)} 15%, transparent);color:${bandColor(r.score)}">${bandLabel(r.score)}</span>
-        <span class="font-mono text-sm font-semibold tabular-nums">${r.score.toFixed(2)}</span>
+      <div class="comp-card-head">
+        <span class="comp-card-name"></span>
+        <span class="band-pill" style="background:color-mix(in oklch, ${bandColor(r.score)} 15%, transparent);color:${bandColor(r.score)}">${bandLabel(r.score)}</span>
+        <span class="comp-score">${r.score.toFixed(2)}</span>
       </div>
-      <div class="mb-2.5 h-1.5 overflow-hidden rounded-full" style="background:color-mix(in oklch, var(--foreground) 10%, transparent)">
-        <div class="meter-fill h-full rounded-full" style="width:0;background:${bandColor(r.score)}"></div>
-      </div>
-      <p class="border-l-2 pl-2.5 font-mono text-xs leading-relaxed text-muted-foreground" style="border-color:color-mix(in oklch, var(--foreground) 15%, transparent)">“${r.evidence_quote}”</p>
-      ${r.low_confidence ? '<p class="mt-1.5 text-[11px] text-muted-foreground">Low confidence — evidence could not be fully verified.</p>' : ""}`;
+      <div class="meter"><div class="meter-fill" style="background:${bandColor(r.score)}"></div></div>
+      <p class="quote"></p>
+      ${r.low_confidence ? '<p class="hint">Low confidence — evidence could not be fully verified.</p>' : ""}`;
+    item.querySelector(".comp-card-name").textContent = r.competency;
+    item.querySelector(".quote").textContent = `“${r.evidence_quote}”`;
 
-    if (report.model_answers?.[r.competency]) {
+    if (report.model_answers && report.model_answers[r.competency]) {
       const d = document.createElement("details");
-      d.className = "group mt-2.5";
-      d.innerHTML = `<summary class="flex cursor-pointer list-none items-center gap-1.5 text-xs font-medium text-primary">
-          <svg class="transition-transform group-open:rotate-90" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="m9 18 6-6-6-6"/></svg>
+      d.className = "model-answer";
+      d.innerHTML = `<summary><span class="disclosure">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="m9 18 6-6-6-6"/></svg>
           Stronger answer
-        </summary><p class="mt-2 rounded-lg bg-secondary p-2.5 text-xs leading-relaxed"></p>`;
+        </span></summary><p></p>`;
       d.querySelector("p").textContent = report.model_answers[r.competency];
       item.appendChild(d);
     }
@@ -734,12 +901,11 @@ function renderReport(report) {
   els.transcript.appendChild(list);
 
   const actions = document.createElement("div");
-  actions.className = "mt-4 flex gap-2 pb-6";
-  actions.innerHTML = `
-    <button id="copy-report" class="flex-1 rounded-lg border border-hair px-3 py-2 text-sm transition-colors hover:bg-secondary">Copy report</button>
-    <button onclick="location.reload()" class="flex-1 rounded-lg border border-hair px-3 py-2 text-sm transition-colors hover:bg-secondary">New interview</button>`;
+  actions.className = "report-actions";
+  actions.innerHTML = `<button class="btn-outline" id="copy-report">Copy report</button>
+    <button class="btn-outline" id="restart-btn">New interview</button>`;
   els.transcript.appendChild(actions);
-
+  $("restart-btn").onclick = () => location.reload();
   $("copy-report").onclick = async () => {
     const lines = [
       "callback-ai session report",
@@ -748,7 +914,7 @@ function renderReport(report) {
       `Top things to fix: ${(report.top_fixes || []).join(", ") || "none"}`, "",
       "--- Per competency ---",
       ...reports.map((c) => `${c.competency}: ${c.score.toFixed(2)}\n  evidence: "${c.evidence_quote}"` +
-        (report.model_answers?.[c.competency] ? `\n  stronger answer: ${report.model_answers[c.competency]}` : "")),
+        (report.model_answers && report.model_answers[c.competency] ? `\n  stronger answer: ${report.model_answers[c.competency]}` : "")),
     ];
     try { await navigator.clipboard.writeText(lines.join("\n")); toast("Report copied to clipboard."); }
     catch { toast("Copy failed.", true); }
