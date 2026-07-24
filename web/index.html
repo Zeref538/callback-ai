@@ -1,401 +1,363 @@
 <!doctype html>
-<html lang="en" data-theme="dark-brand">
+<html lang="en" class="dark">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>callback-ai — adaptive interview simulator</title>
 <meta name="color-scheme" content="dark light">
 <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
-<link href="https://cdn.jsdelivr.net/npm/daisyui@5" rel="stylesheet" type="text/css">
+<style type="text/tailwindcss">
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
+
+@theme {
+  --font-sans: 'Inter', ui-sans-serif, system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+}
+
+/* Light: clean neutral surfaces, emerald primary */
+:root {
+  --radius: 0.5rem;
+  --background: oklch(0.99 0.003 286);
+  --foreground: oklch(0.22 0.02 285);
+  --card: oklch(1 0 0);
+  --primary: oklch(0.55 0.15 158);
+  --primary-foreground: oklch(1 0 0);
+  --secondary: oklch(0.955 0.006 286);
+  --muted: oklch(0.96 0.005 286);
+  --muted-foreground: oklch(0.5 0.02 286);
+  --border: oklch(0.9 0.006 286);
+  --destructive: oklch(0.577 0.245 27.325);
+  --warning: oklch(0.65 0.16 70);
+  --success: oklch(0.55 0.15 158);
+  --info: oklch(0.6 0.13 240);
+}
+
+/* Premium dark: cinematic near-black, emerald glow, hairline borders */
+.dark {
+  --background: oklch(0.13 0.005 285);
+  --foreground: oklch(0.94 0.004 286);
+  --card: oklch(0.17 0.006 285);
+  --primary: oklch(0.7 0.16 158);
+  --primary-foreground: oklch(0.16 0.03 158);
+  --secondary: oklch(0.24 0.01 285);
+  --muted: oklch(0.22 0.008 285);
+  --muted-foreground: oklch(0.65 0.015 285);
+  --border: oklch(1 0 0 / 8%);
+  --destructive: oklch(0.66 0.2 22);
+  --warning: oklch(0.75 0.15 75);
+  --success: oklch(0.7 0.16 158);
+  --info: oklch(0.7 0.13 240);
+}
+
+@layer base {
+  * { border-color: var(--border); }
+  body {
+    background: var(--background);
+    color: var(--foreground);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+  }
+  ::selection { background: color-mix(in oklch, var(--primary) 30%, transparent); }
+  ::-webkit-scrollbar { width: 10px; height: 10px; }
+  ::-webkit-scrollbar-thumb { background: color-mix(in oklch, var(--foreground) 12%, transparent); border-radius: 6px; border: 3px solid transparent; background-clip: content-box; }
+  ::-webkit-scrollbar-thumb:hover { background: color-mix(in oklch, var(--foreground) 22%, transparent); background-clip: content-box; }
+}
+
+@layer utilities {
+  .bg-card { background-color: var(--card); }
+  .bg-secondary { background-color: var(--secondary); }
+  .bg-muted { background-color: var(--muted); }
+  .bg-primary { background-color: var(--primary); }
+  .text-primary { color: var(--primary); }
+  .text-muted-foreground { color: var(--muted-foreground); }
+  .text-destructive { color: var(--destructive); }
+  .text-warning { color: var(--warning); }
+  .text-success { color: var(--success); }
+  .text-info { color: var(--info); }
+  .border-hair { border-color: var(--border); }
+}
+</style>
 <style>
-@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap');
+/* Floating bokeh orbs -- same organic drift as Aegix, CSS-only here. */
+.orb { position: absolute; border-radius: 9999px; will-change: transform; }
+@keyframes drift1 { 0%,100% { transform: translate3d(0,0,0);} 33% { transform: translate3d(60px,-45px,0);} 66% { transform: translate3d(-35px,50px,0);} }
+@keyframes drift2 { 0%,100% { transform: translate3d(0,0,0);} 33% { transform: translate3d(-55px,60px,0);} 66% { transform: translate3d(45px,-30px,0);} }
+@keyframes drift3 { 0%,100% { transform: translate3d(0,0,0);} 50% { transform: translate3d(70px,55px,0);} }
+@media (prefers-reduced-motion: reduce) { .orb { animation: none !important; } }
 
-/* Two custom daisyUI themes: a dark-OLED base and a real light counterpart.
-   daisyUI themes are just CSS custom properties scoped to [data-theme], so
-   this layers on the library rather than fighting it. Swap these two blocks
-   and every component underneath restyles itself. */
-[data-theme="dark-brand"] {
-  color-scheme: dark;
-  --color-base-100: #0B1120;
-  --color-base-200: #131C2E;
-  --color-base-300: #1E293B;
-  --color-base-content: #F1F5F9;
-  --color-primary: #22C55E;
-  --color-primary-content: #04240F;
-  --color-secondary: #38BDF8;
-  --color-secondary-content: #05202E;
-  --color-accent: #A78BFA;
-  --color-accent-content: #1A1030;
-  --color-neutral: #1E293B;
-  --color-neutral-content: #F1F5F9;
-  --color-info: #38BDF8;
-  --color-success: #22C55E;
-  --color-warning: #F59E0B;
-  --color-error: #EF4444;
-  --radius-box: 1rem;
-  --radius-field: 0.625rem;
-  --radius-selector: 0.5rem;
-  --ink-muted: #94A3B8;
-  --grid-line: rgba(148,163,184,0.10);
-  --glow: 0 0 40px -8px rgba(34,197,94,0.35);
-}
-[data-theme="light-brand"] {
-  color-scheme: light;
-  --color-base-100: #FFFFFF;
-  --color-base-200: #F1F5F9;
-  --color-base-300: #E2E8F0;
-  --color-base-content: #0F172A;
-  --color-primary: #16A34A;
-  --color-primary-content: #FFFFFF;
-  --color-secondary: #0284C7;
-  --color-secondary-content: #FFFFFF;
-  --color-accent: #7C3AED;
-  --color-accent-content: #FFFFFF;
-  --color-neutral: #E2E8F0;
-  --color-neutral-content: #0F172A;
-  --color-info: #0284C7;
-  --color-success: #16A34A;
-  --color-warning: #B45309;
-  --color-error: #DC2626;
-  --radius-box: 1rem;
-  --radius-field: 0.625rem;
-  --radius-selector: 0.5rem;
-  --ink-muted: #64748B;
-  --grid-line: rgba(15,23,42,0.06);
-  --glow: 0 20px 40px -20px rgba(22,163,74,0.30);
-}
+.fade-up { animation: fadeUp .3s cubic-bezier(.16,1,.3,1); }
+@keyframes fadeUp { from { opacity:0; transform: translateY(8px);} to { opacity:1; transform: translateY(0);} }
+@media (prefers-reduced-motion: reduce) { .fade-up { animation: none; } }
 
-html, body { min-height: 100dvh; }
-body {
-  font-family: 'IBM Plex Sans', system-ui, sans-serif;
-  background:
-    radial-gradient(1200px 600px at 50% -10%, color-mix(in srgb, var(--color-primary) 12%, transparent), transparent 60%),
-    radial-gradient(900px 500px at 90% 10%, color-mix(in srgb, var(--color-secondary) 8%, transparent), transparent 55%),
-    var(--color-base-100);
-  background-attachment: fixed;
-}
-.font-mono-brand, h1, h2, h3, .brand-name, .question-text, .competency-name, .score-num, .hero-figure, .kicker {
-  font-family: 'JetBrains Mono', ui-monospace, monospace;
-}
-.kicker { letter-spacing: 0.16em; text-transform: uppercase; font-size: 0.68rem; color: var(--ink-muted); }
-.text-muted { color: var(--ink-muted); }
+.ring-value { transition: stroke-dashoffset 900ms cubic-bezier(.16,1,.3,1); }
+.meter-fill { transition: width 700ms cubic-bezier(.16,1,.3,1); }
+@media (prefers-reduced-motion: reduce) { .ring-value, .meter-fill { transition: none; } }
 
-/* Panels get a subtle top-lit gradient + hairline border instead of a flat fill. */
-.panel {
-  background:
-    linear-gradient(180deg, color-mix(in srgb, var(--color-base-content) 3%, transparent), transparent 120px),
-    var(--color-base-200);
-  border: 1px solid color-mix(in srgb, var(--color-base-content) 8%, transparent);
-  border-radius: var(--radius-box);
-}
-.panel-inset { background: var(--color-base-300); border: 1px solid color-mix(in srgb, var(--color-base-content) 6%, transparent); border-radius: var(--radius-field); }
+/* budget rail: one tick per question, filled as the agent spends them */
+.tick { height: 4px; border-radius: 2px; flex: 1; background: color-mix(in oklch, var(--foreground) 12%, transparent); transition: background .3s; }
+.tick.spent { background: color-mix(in oklch, var(--foreground) 45%, transparent); }
+.tick.active { background: var(--primary); box-shadow: 0 0 8px color-mix(in oklch, var(--primary) 60%, transparent); }
 
-.dot-grid {
-  position: fixed; inset: 0; z-index: -1; pointer-events: none;
-  background-image: radial-gradient(var(--grid-line) 1px, transparent 1px);
-  background-size: 28px 28px;
-  mask-image: radial-gradient(ellipse 80% 60% at 50% 0%, #000 30%, transparent 75%);
-}
-
-.screen { display: none; }
-.screen.active { display: block; animation: rise .28s cubic-bezier(.16,1,.3,1); }
-@keyframes rise { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-@media (prefers-reduced-motion: reduce) { .screen.active { animation: none; } }
-
-.brand-mark {
-  width: 34px; height: 34px; border-radius: 9px;
-  background: linear-gradient(135deg, var(--color-primary), color-mix(in srgb, var(--color-primary) 60%, var(--color-secondary)));
-  color: var(--color-primary-content);
-  display: flex; align-items: center; justify-content: center;
-  font-family: 'JetBrains Mono', monospace; font-weight: 700; font-size: 15px;
-  box-shadow: var(--glow);
-}
-
-.persona-card {
-  cursor: pointer; text-align: left; position: relative;
-  background: var(--color-base-300);
-  border: 1.5px solid color-mix(in srgb, var(--color-base-content) 8%, transparent);
-  border-radius: var(--radius-field); padding: 0.85rem 0.9rem;
-  transition: border-color .18s, background .18s, transform .1s;
-}
-.persona-card:hover { border-color: color-mix(in srgb, var(--color-secondary) 55%, transparent); }
-.persona-card:active { transform: scale(.985); }
-.persona-card[aria-pressed="true"] {
-  border-color: var(--color-primary);
-  background: color-mix(in srgb, var(--color-primary) 12%, var(--color-base-300));
-}
-.persona-card[aria-pressed="true"]::after {
-  content: ""; position: absolute; top: 0.7rem; right: 0.7rem;
-  width: 8px; height: 8px; border-radius: 50%; background: var(--color-primary);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary) 25%, transparent);
-}
-.persona-name { font-family: 'JetBrains Mono', monospace; font-weight: 600; font-size: 0.9rem; display: block; margin-bottom: 2px; }
-
-.feature-chip { display: flex; gap: 0.6rem; align-items: flex-start; }
-.feature-chip .ic {
-  flex-shrink: 0; width: 30px; height: 30px; border-radius: 8px;
-  display: flex; align-items: center; justify-content: center;
-  background: color-mix(in srgb, var(--color-secondary) 15%, transparent); color: var(--color-secondary);
-}
-.feature-chip svg { width: 16px; height: 16px; }
-
-/* progress: segmented rail with a fill sweep */
-.progress-rail { display: flex; gap: 5px; }
-.progress-rail .seg { flex: 1; height: 7px; border-radius: 4px; background: color-mix(in srgb, var(--color-base-content) 12%, transparent); overflow: hidden; position: relative; }
-.progress-rail .seg.done { background: color-mix(in srgb, var(--color-base-content) 40%, transparent); }
-.progress-rail .seg.current::after {
-  content: ""; position: absolute; inset: 0; border-radius: 4px;
-  background: var(--color-secondary); animation: pulse 1.6s ease-in-out infinite;
-}
-@keyframes pulse { 0%,100% { opacity: .5; } 50% { opacity: 1; } }
-@media (prefers-reduced-motion: reduce) { .progress-rail .seg.current::after { animation: none; opacity: 1; } }
-
-.chat-bubble-quote { font-family: 'JetBrains Mono', monospace; font-size: 0.78rem; color: var(--ink-muted); border-left: 2px solid color-mix(in srgb, var(--color-base-content) 15%, transparent); padding-left: 0.7rem; }
-
-/* hero radial ring */
-.ring-wrap { position: relative; width: 176px; height: 176px; }
-.ring-svg { transform: rotate(-90deg); }
-.ring-track { stroke: color-mix(in srgb, var(--color-base-content) 10%, transparent); }
-.ring-value { stroke-linecap: round; transition: stroke-dashoffset 900ms cubic-bezier(.16,1,.3,1); }
-@media (prefers-reduced-motion: reduce) { .ring-value { transition: none; } }
-.ring-center { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; }
-.hero-figure { font-size: 2.9rem; font-weight: 700; line-height: 1; }
-
-/* competency meter */
-.meter { height: 9px; border-radius: 5px; background: color-mix(in srgb, var(--color-base-content) 10%, transparent); overflow: hidden; }
-.meter-fill { height: 100%; border-radius: 5px; width: 0; transition: width 800ms cubic-bezier(.16,1,.3,1); }
-@media (prefers-reduced-motion: reduce) { .meter-fill { transition: none; } }
-.band-strong { background: var(--color-success); }
-.band-mid { background: var(--color-warning); }
-.band-weak { background: var(--color-error); }
-.band-pill { font-family: 'JetBrains Mono', monospace; font-size: 0.62rem; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; padding: 2px 7px; border-radius: 999px; display: inline-flex; align-items: center; gap: 4px; }
-.pill-strong { color: var(--color-success); background: color-mix(in srgb, var(--color-success) 15%, transparent); }
-.pill-mid { color: var(--color-warning); background: color-mix(in srgb, var(--color-warning) 15%, transparent); }
-.pill-weak { color: var(--color-error); background: color-mix(in srgb, var(--color-error) 15%, transparent); }
-
-.visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; }
-.btn-glow { box-shadow: var(--glow); }
+.typing span { display:inline-block; width:5px; height:5px; border-radius:9999px; background: var(--muted-foreground); animation: blink 1.4s infinite both; }
+.typing span:nth-child(2){ animation-delay:.2s } .typing span:nth-child(3){ animation-delay:.4s }
+@keyframes blink { 0%,80%,100% { opacity:.25 } 40% { opacity:1 } }
 </style>
 </head>
-<body class="text-base-content">
-<div class="dot-grid" aria-hidden="true"></div>
-<div class="max-w-3xl mx-auto px-4 py-6">
+<body class="antialiased">
 
-  <!-- ===== HEADER ===== -->
-  <header class="flex items-center justify-between mb-8">
-    <div class="flex items-center gap-3">
-      <div class="brand-mark" aria-hidden="true">&gt;_</div>
-      <div>
-        <div class="brand-name font-bold leading-tight">callback-ai</div>
-        <div class="text-xs text-muted -mt-0.5">adaptive interview simulator</div>
-      </div>
-    </div>
-    <button class="btn btn-square btn-ghost" id="theme-toggle" type="button" aria-label="Toggle light and dark theme">
-      <svg id="theme-icon-dark" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
-    </button>
-  </header>
-
-  <div id="error-banner" class="alert alert-error mb-4 hidden" role="alert"></div>
-
-  <!-- ===== SETUP SCREEN ===== -->
-  <section id="screen-setup" class="screen active" aria-labelledby="setup-heading">
-    <!-- hero -->
-    <div class="text-center mb-8">
-      <div class="kicker mb-3">probes · budgets · cites evidence</div>
-      <h1 id="setup-heading" class="text-3xl sm:text-4xl font-bold leading-tight mb-3">
-        Practice against an interviewer<br>that actually <span class="text-primary">follows up</span>.
-      </h1>
-      <p class="text-muted max-w-xl mx-auto">
-        Paste a role and your background. It derives a rubric, spends its 12 questions
-        where you're weakest, and scores every answer against a verbatim quote — no flattery.
-      </p>
-    </div>
-
-    <!-- feature strip -->
-    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-6">
-      <div class="feature-chip">
-        <span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12.7c.6.5 1 1.3 1 2.1h6c0-.8.4-1.6 1-2.1A7 7 0 0 0 12 2Z"/></svg></span>
-        <div><div class="font-semibold text-sm">Adaptive probing</div><div class="text-xs text-muted">Vague answers earn a follow-up in your own words.</div></div>
-      </div>
-      <div class="feature-chip">
-        <span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><rect x="7" y="10" width="3" height="8"/><rect x="12" y="6" width="3" height="12"/><rect x="17" y="13" width="3" height="5"/></svg></span>
-        <div><div class="font-semibold text-sm">Budgeted questions</div><div class="text-xs text-muted">Spends more time on your weakest competencies.</div></div>
-      </div>
-      <div class="feature-chip">
-        <span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 12l2 2 4-4"/><path d="M21 12c0 5-3.5 7.5-8.5 9-5-1.5-8.5-4-8.5-9V5l8.5-3L21 5Z"/></svg></span>
-        <div><div class="font-semibold text-sm">Evidence-gated</div><div class="text-xs text-muted">Every score cites a real quote or gets rejected.</div></div>
-      </div>
-    </div>
-
-    <form id="setup-form" class="panel p-5 sm:p-6 space-y-5" novalidate>
-      <div>
-        <div class="flex items-center justify-between mb-1.5">
-          <label for="job-post" class="block text-sm font-medium">Job post <span class="text-error">*</span></label>
-          <button type="button" class="btn btn-xs btn-ghost text-secondary gap-1" id="fill-sample">
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v18M3 12h18"/></svg>
-            Fill with a sample
-          </button>
-        </div>
-        <textarea id="job-post" class="textarea w-full bg-base-300" rows="5" placeholder="Paste the job posting text" required></textarea>
-      </div>
-      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <div>
-          <label for="resume" class="block text-sm font-medium mb-1.5">Resume <span class="text-muted font-normal">optional</span></label>
-          <textarea id="resume" class="textarea w-full bg-base-300" rows="4" placeholder="Paste resume text"></textarea>
-        </div>
-        <div>
-          <label for="portfolio-link" class="block text-sm font-medium mb-1.5">Portfolio link <span class="text-muted font-normal">optional</span></label>
-          <input id="portfolio-link" type="url" class="input w-full bg-base-300" placeholder="https://your-portfolio.example">
-          <p class="text-xs text-muted mt-1.5">Best-effort text extraction; JS-only sites may not parse.</p>
-        </div>
-      </div>
-      <div>
-        <label class="block text-sm font-medium mb-2" id="persona-label">Interviewer persona</label>
-        <div class="grid grid-cols-1 sm:grid-cols-3 gap-2.5" role="group" aria-labelledby="persona-label">
-          <button type="button" class="persona-card" data-persona="friendly" aria-pressed="false">
-            <span class="persona-name">Friendly</span>
-            <span class="text-xs text-muted">Encouraging tone, softer follow-ups.</span>
-          </button>
-          <button type="button" class="persona-card" data-persona="neutral" aria-pressed="true">
-            <span class="persona-name">Neutral</span>
-            <span class="text-xs text-muted">Plain, professional, standard probing.</span>
-          </button>
-          <button type="button" class="persona-card" data-persona="adversarial" aria-pressed="false">
-            <span class="persona-name">Adversarial</span>
-            <span class="text-xs text-muted">Terse, skeptical, presses on vague numbers.</span>
-          </button>
-        </div>
-      </div>
-      <div>
-        <button type="submit" class="btn btn-primary btn-glow w-full text-base" id="start-btn">
-          <span id="start-btn-label">Start interview</span>
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
-        </button>
-        <p class="text-xs text-muted text-center mt-2">12 questions · roughly 10–15 minutes · nothing is saved to a server you don't run</p>
-      </div>
-    </form>
-  </section>
-
-  <!-- ===== INTERVIEW SCREEN ===== -->
-  <section id="screen-interview" class="screen" aria-labelledby="interview-heading">
-    <h2 id="interview-heading" class="visually-hidden">Interview in progress</h2>
-    <div class="panel p-4 mb-4 sticky top-2 z-10" style="backdrop-filter: blur(8px);">
-      <div class="flex items-center justify-between mb-2">
-        <span class="kicker" id="progress-meta-competency">competency</span>
-        <span class="text-xs text-muted" id="progress-meta-count">question 1</span>
-      </div>
-      <div class="progress-rail" id="progress-row" aria-hidden="true"></div>
-    </div>
-
-    <div class="flex flex-col gap-1 mb-4" id="transcript"></div>
-
-    <div class="sticky bottom-3">
-      <form id="answer-form" class="panel p-2 flex gap-2 items-end">
-        <label for="answer-input" class="visually-hidden">Your answer</label>
-        <textarea id="answer-input" class="textarea flex-1 bg-base-300 border-0 focus:outline-none resize-none" rows="1" placeholder="Type your answer... (Enter to send · Shift+Enter for newline)"></textarea>
-        <button type="submit" class="btn btn-primary btn-square" id="send-btn" aria-label="Send answer">
-          <svg id="send-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 2 11 13"/><path d="M22 2 15 22l-4-9-9-4 20-7Z"/></svg>
-        </button>
-      </form>
-      <div class="flex items-center justify-between px-1 mt-1.5">
-        <button type="button" class="btn btn-xs btn-ghost text-muted" id="skip-btn">
-          Not sure — skip this one
-        </button>
-        <span class="text-xs text-muted tabular-nums" id="word-count"></span>
-      </div>
-    </div>
-  </section>
-
-  <!-- ===== REPORT SCREEN ===== -->
-  <section id="screen-report" class="screen" aria-labelledby="report-heading">
-    <h2 id="report-heading" class="visually-hidden">Session report</h2>
-
-    <!-- hero: radial ring + verdict -->
-    <div class="panel p-6 sm:p-8 mb-4">
-      <div class="flex flex-col sm:flex-row items-center gap-6 sm:gap-8">
-        <div class="ring-wrap" role="img" id="ring-aria" aria-label="Overall readiness">
-          <svg class="ring-svg" width="176" height="176" viewBox="0 0 176 176" aria-hidden="true">
-            <circle class="ring-track" cx="88" cy="88" r="76" fill="none" stroke-width="14"/>
-            <circle class="ring-value" id="ring-value" cx="88" cy="88" r="76" fill="none" stroke-width="14"
-                    stroke="var(--color-primary)" stroke-dasharray="477.5" stroke-dashoffset="477.5"/>
-          </svg>
-          <div class="ring-center">
-            <div class="hero-figure" id="report-score">--</div>
-            <div class="text-xs text-muted">/ 1.00</div>
-          </div>
-        </div>
-        <div class="text-center sm:text-left flex-1">
-          <div class="kicker mb-2">session verdict</div>
-          <div class="text-xl font-semibold mb-1" id="report-verdict">Readiness assessed</div>
-          <p class="text-sm text-muted" id="report-summary"></p>
-          <div class="flex flex-wrap gap-2 mt-4 justify-center sm:justify-start" id="report-stats"></div>
-        </div>
-      </div>
-    </div>
-
-    <div id="report-callout"></div>
-
-    <div class="kicker mb-3 mt-6">per-competency breakdown</div>
-    <div id="report-competencies" class="flex flex-col gap-3"></div>
-
-    <div class="flex flex-col sm:flex-row gap-2 mt-6">
-      <button class="btn btn-ghost flex-1" id="copy-report-btn">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
-        <span id="copy-report-label">Copy report</span>
-      </button>
-      <button class="btn btn-ghost flex-1" onclick="location.reload()">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 9-9 9 9 0 0 0-6.4 2.6L3 8"/><path d="M3 3v5h5"/></svg>
-        Run another session
-      </button>
-    </div>
-  </section>
-
+<!-- bokeh field -->
+<div aria-hidden="true" class="pointer-events-none fixed inset-0 -z-10 overflow-hidden">
+  <div class="orb" style="left:6%;top:10%;width:380px;height:380px;background:oklch(0.7 0.16 158 / 0.16);filter:blur(76px);animation:drift1 34s ease-in-out infinite"></div>
+  <div class="orb" style="left:78%;top:4%;width:300px;height:300px;background:oklch(0.7 0.13 240 / 0.13);filter:blur(60px);animation:drift2 41s ease-in-out infinite"></div>
+  <div class="orb" style="left:66%;top:64%;width:420px;height:420px;background:oklch(0.7 0.16 158 / 0.12);filter:blur(84px);animation:drift3 47s ease-in-out infinite"></div>
+  <div class="orb hidden sm:block" style="left:20%;top:76%;width:240px;height:240px;background:oklch(0.72 0.14 300 / 0.10);filter:blur(48px);animation:drift2 38s ease-in-out infinite"></div>
 </div>
+
+<div class="flex min-h-svh">
+
+  <!-- ============ SIDEBAR ============ -->
+  <div id="sidebar-scrim" class="fixed inset-0 z-40 bg-black/50 backdrop-blur-sm hidden md:hidden"></div>
+  <aside id="sidebar"
+    class="fixed inset-y-0 left-0 z-50 flex w-72 flex-col border-r border-hair backdrop-blur-xl transition-transform duration-200 -translate-x-full
+           md:sticky md:top-0 md:z-auto md:h-svh md:translate-x-0 md:self-start"
+    style="background: color-mix(in oklch, var(--card) 45%, transparent);">
+
+    <div class="flex items-center justify-between px-4 py-4">
+      <div class="flex items-center gap-2">
+        <div class="flex size-7 items-center justify-center rounded-lg font-mono text-[13px] font-bold"
+             style="background:linear-gradient(135deg, var(--primary), color-mix(in oklch, var(--primary) 55%, var(--info)));color:var(--primary-foreground)">&gt;_</div>
+        <span class="text-sm font-semibold">callback<span class="text-primary">-ai</span></span>
+      </div>
+      <div class="flex items-center gap-1">
+        <button id="theme-toggle" class="flex size-9 items-center justify-center rounded-lg text-muted-foreground hover:text-[var(--foreground)] hover:bg-secondary transition-colors" aria-label="Toggle theme">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+        </button>
+        <button id="sidebar-close" class="flex size-9 items-center justify-center rounded-lg text-muted-foreground md:hidden" aria-label="Close sidebar">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
+        </button>
+      </div>
+    </div>
+
+    <div class="px-3">
+      <button id="new-session-btn" class="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-opacity hover:opacity-90"
+              style="background:var(--primary);color:var(--primary-foreground)">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+        New interview
+      </button>
+    </div>
+
+    <!-- THE TWIST: live rubric rail. A generic chat UI has no idea what it's
+         spending its turns on; this agent budgets 12 questions across weighted
+         competencies, so the sidebar shows that allocation happening live. -->
+    <div id="rubric-panel" class="mx-3 mt-4 rounded-xl border border-hair p-3 hidden" style="background: color-mix(in oklch, var(--card) 60%, transparent)">
+      <div class="mb-2 flex items-baseline justify-between">
+        <span class="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Question budget</span>
+        <span class="font-mono text-[11px] text-muted-foreground"><span id="budget-used">0</span>/<span id="budget-total">12</span></span>
+      </div>
+      <div id="budget-rail" class="mb-3 flex gap-1"></div>
+      <div class="mb-1.5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Competencies</div>
+      <ul id="competency-list" class="space-y-1.5"></ul>
+    </div>
+
+    <nav class="mt-4 flex-1 overflow-y-auto px-3 pb-4">
+      <div id="history-empty" class="mt-6 px-2 text-center text-xs text-muted-foreground">
+        <svg class="mx-auto mb-2 opacity-50" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M8 2v4M16 2v4M3 10h18"/><rect x="3" y="4" width="18" height="18" rx="2"/></svg>
+        No sessions yet. Run one to see it here.
+      </div>
+      <div id="history-wrap" class="hidden">
+        <div class="mb-1 flex items-center justify-between px-2">
+          <span class="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">History</span>
+          <button id="clear-history" class="-m-1.5 flex items-center gap-1 p-1.5 text-[11px] text-muted-foreground hover:text-destructive transition-colors">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/></svg>
+            Clear
+          </button>
+        </div>
+        <ul id="history-list" class="space-y-0.5"></ul>
+      </div>
+    </nav>
+
+    <div class="border-t border-hair p-3 text-[11px] leading-relaxed text-muted-foreground">
+      Practice tool — scores are an LLM's read of your answers, not a hiring decision.
+    </div>
+  </aside>
+
+  <!-- ============ MAIN ============ -->
+  <div class="flex min-w-0 flex-1 flex-col">
+    <header class="sticky top-0 z-30 flex items-center gap-3 border-b border-hair px-4 py-3 backdrop-blur-md md:hidden"
+            style="background: color-mix(in oklch, var(--background) 70%, transparent)">
+      <button id="sidebar-open" class="-ml-2 flex size-10 items-center justify-center rounded-lg text-muted-foreground" aria-label="Open menu">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
+      </button>
+      <span class="text-sm font-semibold">callback<span class="text-primary">-ai</span></span>
+    </header>
+
+    <main class="mx-auto flex w-full max-w-3xl flex-1 flex-col px-4 py-6 sm:px-6">
+
+      <!-- ===== SETUP (empty state) ===== -->
+      <section id="screen-setup" class="flex flex-1 flex-col justify-center fade-up">
+        <div class="mb-8 text-center">
+          <h1 class="mb-3 text-3xl font-semibold tracking-tight sm:text-4xl">
+            An interviewer that<br class="hidden sm:block"> actually <span class="text-primary">follows up</span>.
+          </h1>
+          <p class="mx-auto max-w-md text-sm text-muted-foreground">
+            Paste a role and your background. It derives a rubric, spends 12 questions where
+            you're weakest, and cites a verbatim quote for every score.
+          </p>
+        </div>
+
+        <form id="setup-form" class="rounded-2xl border border-hair p-4 sm:p-5" style="background: color-mix(in oklch, var(--card) 70%, transparent)" novalidate>
+          <div class="mb-4">
+            <div class="mb-1.5 flex items-center justify-between">
+              <label for="job-post" class="text-sm font-medium">Job post</label>
+              <button type="button" id="fill-sample" class="flex items-center gap-1 text-xs text-primary hover:underline">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+                Use a sample
+              </button>
+            </div>
+            <textarea id="job-post" rows="4" required placeholder="Paste the job posting text"
+              class="w-full resize-y rounded-lg border border-hair bg-secondary px-3 py-2 text-sm outline-none placeholder:text-muted-foreground focus:border-[var(--primary)]"></textarea>
+          </div>
+
+          <details class="mb-4 group">
+            <summary class="cursor-pointer list-none text-xs text-muted-foreground hover:text-[var(--foreground)] flex items-center gap-1.5">
+              <svg class="transition-transform group-open:rotate-90" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="m9 18 6-6-6-6"/></svg>
+              Add your background (optional, makes probes specific to you)
+            </summary>
+            <div class="mt-3 space-y-3">
+              <div>
+                <label for="resume" class="mb-1.5 block text-sm font-medium">Resume</label>
+                <textarea id="resume" rows="3" placeholder="Paste resume text"
+                  class="w-full resize-y rounded-lg border border-hair bg-secondary px-3 py-2 text-sm outline-none placeholder:text-muted-foreground focus:border-[var(--primary)]"></textarea>
+              </div>
+              <div>
+                <label for="portfolio-link" class="mb-1.5 block text-sm font-medium">Portfolio link</label>
+                <input id="portfolio-link" type="url" placeholder="https://your-portfolio.example"
+                  class="w-full rounded-lg border border-hair bg-secondary px-3 py-2 text-sm outline-none placeholder:text-muted-foreground focus:border-[var(--primary)]">
+                <p class="mt-1.5 text-xs text-muted-foreground">Best-effort text extraction; JS-only sites may not parse.</p>
+              </div>
+            </div>
+          </details>
+
+          <div class="mb-4">
+            <div class="mb-2 text-sm font-medium">Interviewer</div>
+            <div class="grid grid-cols-3 gap-2" role="group" aria-label="Interviewer persona">
+              <button type="button" class="persona-card rounded-lg border border-hair bg-secondary p-2.5 text-left transition-colors" data-persona="friendly" aria-pressed="false">
+                <span class="block text-xs font-semibold">Friendly</span>
+                <span class="text-[11px] leading-tight text-muted-foreground">Softer follow-ups</span>
+              </button>
+              <button type="button" class="persona-card rounded-lg border p-2.5 text-left transition-colors" data-persona="neutral" aria-pressed="true">
+                <span class="block text-xs font-semibold">Neutral</span>
+                <span class="text-[11px] leading-tight text-muted-foreground">Standard probing</span>
+              </button>
+              <button type="button" class="persona-card rounded-lg border border-hair bg-secondary p-2.5 text-left transition-colors" data-persona="adversarial" aria-pressed="false">
+                <span class="block text-xs font-semibold">Adversarial</span>
+                <span class="text-[11px] leading-tight text-muted-foreground">Presses on numbers</span>
+              </button>
+            </div>
+          </div>
+
+          <button type="submit" id="start-btn"
+            class="flex w-full items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-medium transition-opacity hover:opacity-90 disabled:opacity-50"
+            style="background:var(--primary);color:var(--primary-foreground)">
+            <span id="start-btn-label">Start interview</span>
+          </button>
+          <p class="mt-2.5 text-center text-[11px] text-muted-foreground">12 questions · ~10–15 min · runs against your own API key</p>
+        </form>
+      </section>
+
+      <!-- ===== CHAT ===== -->
+      <section id="screen-chat" class="hidden flex-1 flex-col">
+        <div id="transcript" class="flex-1 space-y-5 pb-4"></div>
+      </section>
+    </main>
+
+    <!-- composer -->
+    <div id="composer-wrap" class="sticky bottom-0 hidden border-t border-hair backdrop-blur-md"
+         style="background: color-mix(in oklch, var(--background) 78%, transparent)">
+      <div class="mx-auto w-full max-w-3xl px-4 py-3 sm:px-6">
+        <form id="answer-form" class="flex items-end gap-2 rounded-xl border border-hair p-2" style="background:var(--card)">
+          <label for="answer-input" class="sr-only">Your answer</label>
+          <textarea id="answer-input" rows="1" placeholder="Answer the question… (Enter to send · Shift+Enter for newline)"
+            class="max-h-48 flex-1 resize-none bg-transparent px-2 py-1.5 text-sm outline-none placeholder:text-muted-foreground"></textarea>
+          <button type="submit" id="send-btn" aria-label="Send answer"
+            class="flex size-9 shrink-0 items-center justify-center rounded-lg transition-opacity hover:opacity-90 disabled:opacity-40"
+            style="background:var(--primary);color:var(--primary-foreground)">
+            <svg id="send-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2 11 13"/><path d="M22 2 15 22l-4-9-9-4 20-7Z"/></svg>
+          </button>
+        </form>
+        <div class="mt-1.5 flex items-center justify-between px-1">
+          <button type="button" id="skip-btn" class="text-[11px] text-muted-foreground hover:text-[var(--foreground)] transition-colors">Not sure — skip this one</button>
+          <span id="word-count" class="font-mono text-[11px] tabular-nums text-muted-foreground"></span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- toast -->
+<div id="toast" class="fixed bottom-4 left-1/2 z-[100] hidden -translate-x-1/2 rounded-lg border border-hair px-4 py-2.5 text-sm shadow-xl" style="background:var(--card)" role="alert"></div>
 
 <script>
 const API = "/api";
-const state = { sessionId: null, persona: "neutral", competencies: [], budget: 0, turn: 0 };
-const RING_CIRCUMFERENCE = 2 * Math.PI * 76; // r=76
+const HISTORY_KEY = "callback-ai-history";
+const state = { sessionId: null, persona: "neutral", competencies: [], budget: 12, turn: 0, spend: {}, report: null };
 
+const $ = (id) => document.getElementById(id);
 const els = {
-  errorBanner: document.getElementById("error-banner"),
-  setupForm: document.getElementById("setup-form"),
-  startBtn: document.getElementById("start-btn"),
-  startBtnLabel: document.getElementById("start-btn-label"),
-  progressRow: document.getElementById("progress-row"),
-  progressMetaCompetency: document.getElementById("progress-meta-competency"),
-  progressMetaCount: document.getElementById("progress-meta-count"),
-  transcript: document.getElementById("transcript"),
-  answerForm: document.getElementById("answer-form"),
-  answerInput: document.getElementById("answer-input"),
-  sendBtn: document.getElementById("send-btn"),
+  transcript: $("transcript"), answerInput: $("answer-input"), answerForm: $("answer-form"),
+  sendBtn: $("send-btn"), startBtn: $("start-btn"), startBtnLabel: $("start-btn-label"),
+  setup: $("screen-setup"), chat: $("screen-chat"), composer: $("composer-wrap"),
 };
 
-// ---- theme ----
-const themeToggle = document.getElementById("theme-toggle");
-function applyTheme(theme) {
-  document.documentElement.setAttribute("data-theme", theme === "light" ? "light-brand" : "dark-brand");
-  localStorage.setItem("callback-ai-theme", theme);
+// ---------- theme ----------
+function applyTheme(t) {
+  document.documentElement.classList.toggle("dark", t === "dark");
+  localStorage.setItem("callback-ai-theme", t);
 }
-const savedTheme = localStorage.getItem("callback-ai-theme");
-if (savedTheme) applyTheme(savedTheme);
-else if (matchMedia("(prefers-color-scheme: light)").matches) applyTheme("light");
-themeToggle.addEventListener("click", () => {
-  const current = document.documentElement.getAttribute("data-theme") === "light-brand" ? "light" : "dark";
-  applyTheme(current === "dark" ? "light" : "dark");
-});
+applyTheme(localStorage.getItem("callback-ai-theme")
+  || (matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark"));
+$("theme-toggle").onclick = () =>
+  applyTheme(document.documentElement.classList.contains("dark") ? "light" : "dark");
 
-// ---- persona picker ----
+// ---------- sidebar (mobile) ----------
+const sidebar = $("sidebar"), scrim = $("sidebar-scrim");
+function openSidebar(o) {
+  sidebar.classList.toggle("-translate-x-full", !o);
+  scrim.classList.toggle("hidden", !o);
+}
+$("sidebar-open").onclick = () => openSidebar(true);
+$("sidebar-close").onclick = () => openSidebar(false);
+scrim.onclick = () => openSidebar(false);
+
+// ---------- toast ----------
+let toastTimer;
+function toast(msg, isError) {
+  const t = $("toast");
+  t.textContent = msg;
+  t.style.borderColor = isError ? "var(--destructive)" : "var(--border)";
+  t.classList.remove("hidden");
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.add("hidden"), 4500);
+}
+
+// ---------- persona ----------
+function paintPersona(card, on) {
+  card.setAttribute("aria-pressed", String(on));
+  card.style.borderColor = on ? "var(--primary)" : "";
+  card.style.background = on ? "color-mix(in oklch, var(--primary) 12%, transparent)" : "";
+  if (!on) { card.classList.add("border-hair", "bg-secondary"); }
+  else { card.classList.remove("border-hair", "bg-secondary"); }
+}
 document.querySelectorAll(".persona-card").forEach((card) => {
-  card.addEventListener("click", () => {
-    document.querySelectorAll(".persona-card").forEach((c) => c.setAttribute("aria-pressed", "false"));
-    card.setAttribute("aria-pressed", "true");
+  if (card.dataset.persona === "neutral") paintPersona(card, true);
+  card.onclick = () => {
+    document.querySelectorAll(".persona-card").forEach((c) => paintPersona(c, false));
+    paintPersona(card, true);
     state.persona = card.dataset.persona;
-  });
+  };
 });
 
-// Sample data: without this a first-time visitor lands on three empty boxes
-// with nothing to paste, which is the whole "understand it in 60 seconds" case.
+// ---------- sample ----------
 const SAMPLE = {
   jobPost: `Backend Engineer (Mid-level) — Payments Team
 
@@ -423,171 +385,202 @@ Projects:
 Skills: Python, Go, PostgreSQL, Redis, Kubernetes (basic), Terraform (basic).
 Experience: 2 years as a backend engineer at a fintech startup.`,
 };
+$("fill-sample").onclick = () => {
+  $("job-post").value = SAMPLE.jobPost;
+  $("resume").value = SAMPLE.resume;
+  $("resume").closest("details").open = true;
+  toast("Sample role and resume loaded.");
+};
 
-document.getElementById("fill-sample").addEventListener("click", () => {
-  document.getElementById("job-post").value = SAMPLE.jobPost;
-  document.getElementById("resume").value = SAMPLE.resume;
-  document.getElementById("job-post").focus();
-});
+// ---------- history (localStorage, like Aegix) ----------
+const loadHistory = () => { try { return JSON.parse(localStorage.getItem(HISTORY_KEY)) || []; } catch { return []; } };
+function saveHistory(items) { localStorage.setItem(HISTORY_KEY, JSON.stringify(items.slice(0, 30))); renderHistory(); }
+function addHistory(entry) { saveHistory([entry, ...loadHistory()]); }
 
-function showError(message) { els.errorBanner.textContent = message; els.errorBanner.classList.remove("hidden"); }
-function clearError() { els.errorBanner.classList.add("hidden"); }
-function showScreen(id) {
-  document.querySelectorAll(".screen").forEach((s) => s.classList.remove("active"));
-  document.getElementById(id).classList.add("active");
-  window.scrollTo({ top: 0, behavior: "smooth" });
+function renderHistory() {
+  const items = loadHistory();
+  $("history-empty").classList.toggle("hidden", items.length > 0);
+  $("history-wrap").classList.toggle("hidden", items.length === 0);
+  const list = $("history-list");
+  list.innerHTML = "";
+  items.forEach((item) => {
+    const li = document.createElement("li");
+    li.innerHTML = `<button class="group flex w-full items-center gap-2 rounded-lg px-2 py-2 text-left text-sm text-muted-foreground transition-colors hover:bg-secondary">
+      <svg class="size-3.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg>
+      <span class="min-w-0 flex-1 truncate">${item.title}</span>
+      <span class="shrink-0 rounded-full px-1.5 py-0.5 font-mono text-[10px] font-semibold tabular-nums"
+            style="background:color-mix(in oklch, ${bandColor(item.score)} 18%, transparent);color:${bandColor(item.score)}">${item.score.toFixed(2)}</span>
+    </button>`;
+    li.querySelector("button").onclick = () => { renderReportFromHistory(item); openSidebar(false); };
+    list.appendChild(li);
+  });
+}
+$("clear-history").onclick = () => { localStorage.removeItem(HISTORY_KEY); renderHistory(); toast("History cleared."); };
+
+// ---------- rubric rail (the twist) ----------
+function renderRubricPanel() {
+  $("rubric-panel").classList.remove("hidden");
+  $("budget-total").textContent = state.budget;
+  $("budget-used").textContent = state.turn;
+
+  const rail = $("budget-rail");
+  rail.innerHTML = "";
+  for (let i = 0; i < state.budget; i++) {
+    const t = document.createElement("div");
+    t.className = "tick" + (i < state.turn - 1 ? " spent" : i === state.turn - 1 ? " active" : "");
+    rail.appendChild(t);
+  }
+
+  const list = $("competency-list");
+  list.innerHTML = "";
+  state.competencies.forEach((name) => {
+    const spent = state.spend[name] || 0;
+    const isCurrent = name === state.currentCompetency;
+    const li = document.createElement("li");
+    li.innerHTML = `<div class="flex items-center gap-2">
+      <span class="size-1.5 shrink-0 rounded-full" style="background:${isCurrent ? "var(--primary)" : "color-mix(in oklch, var(--foreground) 25%, transparent)"}"></span>
+      <span class="min-w-0 flex-1 truncate text-xs ${isCurrent ? "" : "text-muted-foreground"}" title="${name}">${name}</span>
+      <span class="font-mono text-[10px] tabular-nums text-muted-foreground">${spent}</span>
+    </div>`;
+    list.appendChild(li);
+  });
 }
 
-const SPINNER = '<span class="loading loading-spinner loading-sm" aria-hidden="true"></span>';
+// ---------- chat rendering ----------
+function bubbleQuestion(text) {
+  const div = document.createElement("div");
+  div.className = "fade-up";
+  div.innerHTML = `<div class="mb-1.5 flex items-center gap-2">
+      <div class="flex size-5 items-center justify-center rounded font-mono text-[10px] font-bold" style="background:var(--primary);color:var(--primary-foreground)">&gt;_</div>
+      <span class="text-xs font-medium text-muted-foreground">Interviewer</span>
+    </div>
+    <div class="text-[15px] leading-relaxed"></div>`;
+  div.querySelector("div:last-child").textContent = text;
+  els.transcript.appendChild(div);
+  div.scrollIntoView({ behavior: "smooth", block: "end" });
+  return div;
+}
 
-// ---- setup submit ----
-els.setupForm.addEventListener("submit", async (e) => {
+function bubbleAnswer(text) {
+  const div = document.createElement("div");
+  div.className = "fade-up flex justify-end";
+  div.innerHTML = `<div class="max-w-[85%] rounded-2xl rounded-br-sm border border-hair px-3.5 py-2.5 text-[15px] leading-relaxed" style="background:var(--secondary)"></div>`;
+  div.querySelector("div").textContent = text;
+  els.transcript.appendChild(div);
+  div.scrollIntoView({ behavior: "smooth", block: "end" });
+  return div;
+}
+
+function typingIndicator(on) {
+  const old = $("typing");
+  if (old) old.remove();
+  if (!on) return;
+  const div = document.createElement("div");
+  div.id = "typing";
+  div.innerHTML = `<div class="flex items-center gap-2 text-xs text-muted-foreground">
+    <span class="typing flex gap-1"><span></span><span></span><span></span></span>
+    scoring your answer &amp; choosing the next question…
+  </div>`;
+  els.transcript.appendChild(div);
+  div.scrollIntoView({ behavior: "smooth", block: "end" });
+}
+
+const VERDICT = {
+  correct:    { color: "var(--success)",     icon: '<path d="M20 6 9 17l-5-5"/>' },
+  partial:    { color: "var(--warning)",     icon: '<path d="M12 9v4M12 17h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/>' },
+  incomplete: { color: "var(--destructive)", icon: '<circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/>' },
+};
+
+function bubbleFeedback(feedbackText, lowConfidence) {
+  const m = feedbackText.match(/\[(\w+)\]\s*(.*)/);
+  const verdict = m ? m[1] : "partial";
+  const message = m ? m[2] : feedbackText;
+  const v = VERDICT[verdict] || VERDICT.partial;
+
+  const div = document.createElement("div");
+  div.className = "fade-up flex justify-end";
+  div.innerHTML = `<div class="max-w-[85%] rounded-xl border px-3 py-2 text-[13px] leading-relaxed" style="border-color:color-mix(in oklch, ${v.color} 40%, transparent);background:color-mix(in oklch, ${v.color} 8%, transparent)">
+      <div class="mb-1 flex items-center gap-1.5 font-medium" style="color:${v.color}">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">${v.icon}</svg>
+        <span class="uppercase tracking-wide text-[11px]">${verdict}</span>
+      </div>
+      <span class="msg"></span>
+      ${lowConfidence ? '<span class="mt-1 block text-[11px] text-muted-foreground">Low confidence — could not verify this against your answer.</span>' : ""}
+    </div>`;
+  div.querySelector(".msg").textContent = message;
+  els.transcript.appendChild(div);
+  div.scrollIntoView({ behavior: "smooth", block: "end" });
+}
+
+// ---------- start session ----------
+$("setup-form").addEventListener("submit", async (e) => {
   e.preventDefault();
-  clearError();
-  const jobPost = document.getElementById("job-post").value.trim();
-  if (!jobPost) { showError("Paste a job post before starting."); return; }
+  const jobPost = $("job-post").value.trim();
+  if (!jobPost) { toast("Paste a job post before starting.", true); return; }
 
   els.startBtn.disabled = true;
-  // Staged labels: this call parses the post, the resume, and maybe a URL --
-  // several seconds where one static "Loading..." reads as a hang.
-  const stages = ["Deriving rubric from the job post...", "Reading your background...", "Writing the first question..."];
-  let stageIdx = 0;
-  els.startBtnLabel.innerHTML = SPINNER + " " + stages[0];
-  const stageTimer = setInterval(() => {
-    stageIdx = Math.min(stageIdx + 1, stages.length - 1);
-    els.startBtnLabel.innerHTML = SPINNER + " " + stages[stageIdx];
-  }, 2500);
-
-  const body = {
-    job_post: jobPost,
-    resume: document.getElementById("resume").value.trim() || null,
-    portfolio_link: document.getElementById("portfolio-link").value.trim() || null,
-    persona: state.persona,
-  };
+  const stages = ["Deriving rubric…", "Reading your background…", "Writing the first question…"];
+  let i = 0;
+  els.startBtnLabel.textContent = stages[0];
+  const timer = setInterval(() => { i = Math.min(i + 1, stages.length - 1); els.startBtnLabel.textContent = stages[i]; }, 2500);
 
   try {
-    const resp = await fetch(`${API}/sessions`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+    const resp = await fetch(`${API}/sessions`, {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        job_post: jobPost,
+        resume: $("resume").value.trim() || null,
+        portfolio_link: $("portfolio-link").value.trim() || null,
+        persona: state.persona,
+      }),
+    });
     if (!resp.ok) throw new Error((await resp.json()).detail || "Failed to start session.");
     const data = await resp.json();
 
-    state.sessionId = data.session_id;
-    state.competencies = data.competencies;
-    state.turn = 1;
+    Object.assign(state, {
+      sessionId: data.session_id, competencies: data.competencies, budget: data.budget || 12,
+      turn: 1, spend: {}, currentCompetency: data.competency, report: null,
+      jobTitle: jobPost.split("\n")[0].slice(0, 42),
+    });
+    state.spend[data.competency] = 1;
+
+    els.setup.classList.add("hidden");
+    els.chat.classList.remove("hidden");
+    els.chat.classList.add("flex");
+    els.composer.classList.remove("hidden");
+    els.transcript.innerHTML = "";
 
     if (data.conflicts) {
-      const note = document.createElement("div");
-      note.className = "alert alert-warning mb-2";
-      note.innerHTML = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/><path d="M12 9v4M12 17h.01"/></svg><span>${data.conflicts} conflicting claim(s) between your resume and portfolio — fair game for follow-ups.</span>`;
-      els.transcript.appendChild(note);
+      const n = document.createElement("div");
+      n.className = "rounded-lg border px-3 py-2 text-[13px]";
+      n.style.cssText = "border-color:color-mix(in oklch, var(--warning) 40%, transparent);background:color-mix(in oklch, var(--warning) 8%, transparent)";
+      n.textContent = `${data.conflicts} conflicting claim(s) between your resume and portfolio — fair game for follow-ups.`;
+      els.transcript.appendChild(n);
     }
 
-    renderProgress(data.competency);
-    addQuestion(data.question);
-    showScreen("screen-interview");
+    renderRubricPanel();
+    bubbleQuestion(data.question);
     els.answerInput.focus();
   } catch (err) {
-    showError(err.message);
+    toast(err.message, true);
   } finally {
-    clearInterval(stageTimer);
+    clearInterval(timer);
     els.startBtn.disabled = false;
     els.startBtnLabel.textContent = "Start interview";
   }
 });
 
-// ---- progress indicator ----
-function renderProgress(currentCompetency) {
-  const budget = state.competencies.length ? Math.max(state.competencies.length, 12) : 12;
-  els.progressRow.innerHTML = "";
-  for (let i = 0; i < budget; i++) {
-    const seg = document.createElement("div");
-    seg.className = "seg" + (i < state.turn - 1 ? " done" : i === state.turn - 1 ? " current" : "");
-    els.progressRow.appendChild(seg);
-  }
-  els.progressMetaCompetency.textContent = currentCompetency || "...";
-  els.progressMetaCount.textContent = `question ${state.turn}`;
-}
-
-function addQuestion(text) {
-  const wrap = document.createElement("div");
-  wrap.className = "chat chat-start";
-  wrap.innerHTML = `<div class="chat-header text-muted text-xs mb-1">Interviewer</div>
-    <div class="chat-bubble chat-bubble-neutral question-text text-sm"></div>`;
-  wrap.querySelector(".question-text").textContent = text;
-  els.transcript.appendChild(wrap);
-  wrap.scrollIntoView({ behavior: "smooth", block: "end" });
-}
-
-function addAnswer(text) {
-  const wrap = document.createElement("div");
-  wrap.className = "chat chat-end";
-  wrap.innerHTML = `<div class="chat-header text-muted text-xs mb-1">You</div>
-    <div class="chat-bubble chat-bubble-primary text-sm"></div>`;
-  wrap.querySelector(".chat-bubble").textContent = text;
-  els.transcript.appendChild(wrap);
-  return wrap;
-}
-
-// "Thinking" placeholder -- an LLM turn can take several seconds; a bare
-// disabled button reads as a frozen page.
-function setThinking(on) {
-  const existing = document.getElementById("thinking-bubble");
-  if (existing) existing.remove();
-  if (!on) return;
-  const wrap = document.createElement("div");
-  wrap.id = "thinking-bubble";
-  wrap.className = "chat chat-start";
-  wrap.innerHTML = `<div class="chat-header text-muted text-xs mb-1">Interviewer</div>
-    <div class="chat-bubble chat-bubble-neutral text-sm flex items-center gap-2">
-      <span class="loading loading-dots loading-sm"></span>
-      <span class="text-muted text-xs">scoring your answer &amp; picking the next question...</span>
-    </div>`;
-  els.transcript.appendChild(wrap);
-  wrap.scrollIntoView({ behavior: "smooth", block: "end" });
-}
-
-// Answer box grows with the answer instead of trapping paragraphs in one row.
-function autoGrow() {
-  const ta = els.answerInput;
-  ta.style.height = "auto";
-  ta.style.height = Math.min(ta.scrollHeight, 200) + "px";
-}
-
-const VERDICT_ICONS = {
-  correct: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>',
-  partial: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 9v4M12 17h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/></svg>',
-  incomplete: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg>',
-};
-const VERDICT_ALERT = { correct: "alert-success", partial: "alert-warning", incomplete: "alert-error" };
-
-function addFeedback(feedbackText, lowConfidence) {
-  const match = feedbackText.match(/\[(\w+)\]\s*(.*)/);
-  const verdict = match ? match[1] : "partial";
-  const message = match ? match[2] : feedbackText;
-
-  const div = document.createElement("div");
-  div.className = `alert ${VERDICT_ALERT[verdict] || "alert-warning"} items-start text-sm mb-2 ms-6`;
-  div.setAttribute("role", "status");
-  div.innerHTML = `${VERDICT_ICONS[verdict] || VERDICT_ICONS.partial}
-    <span><span class="badge badge-sm uppercase font-mono-brand me-1">${verdict}</span>${message}${lowConfidence ? '<span class="block text-xs opacity-70 mt-1">Low confidence — could not verify this against your answer.</span>' : ""}</span>`;
-  els.transcript.appendChild(div);
-  div.scrollIntoView({ behavior: "smooth", block: "end" });
-}
-
-// ---- answer submit ----
+// ---------- answer ----------
 els.answerForm.addEventListener("submit", async (e) => {
   e.preventDefault();
   const answer = els.answerInput.value.trim();
   if (!answer || !state.sessionId) return;
-  clearError();
 
-  // Keep the typed text until the request succeeds -- clearing it first meant a
-  // network failure silently destroyed the answer the user just wrote.
-  const pendingBubble = addAnswer(answer);
+  // Text stays put until the request succeeds — a failure used to eat the answer.
+  const pending = bubbleAnswer(answer);
   els.sendBtn.disabled = true;
   els.answerInput.disabled = true;
-  const originalSendHtml = els.sendBtn.innerHTML;
-  els.sendBtn.innerHTML = SPINNER;
-  setThinking(true);
+  typingIndicator(true);
 
   try {
     const resp = await fetch(`${API}/sessions/${state.sessionId}/answer`, {
@@ -596,170 +589,179 @@ els.answerForm.addEventListener("submit", async (e) => {
     if (!resp.ok) throw new Error((await resp.json()).detail || "Something went wrong.");
     const data = await resp.json();
     els.answerInput.value = "";
-    autoGrow();
+    autoGrow(); $("word-count").textContent = "";
 
-    addFeedback(data.feedback, data.low_confidence);
+    typingIndicator(false);
+    bubbleFeedback(data.feedback, data.low_confidence);
 
     if (data.done) {
-      els.answerForm.style.display = "none";
+      els.composer.classList.add("hidden");
       await loadReport();
-      showScreen("screen-report");
     } else {
       state.turn = data.turn + 1;
-      renderProgress(data.next_competency);
-      addQuestion(data.next_question);
+      state.currentCompetency = data.next_competency;
+      state.spend[data.next_competency] = (state.spend[data.next_competency] || 0) + 1;
+      renderRubricPanel();
+      bubbleQuestion(data.next_question);
     }
   } catch (err) {
-    // Roll the answer back into the box so nothing typed is lost.
-    pendingBubble.remove();
-    showError(`${err.message} Your answer was restored below -- press send to retry.`);
+    pending.remove();
+    typingIndicator(false);
+    toast(`${err.message} Your answer is still in the box — press send to retry.`, true);
   } finally {
-    setThinking(false);
     els.sendBtn.disabled = false;
     els.answerInput.disabled = false;
-    els.sendBtn.innerHTML = originalSendHtml;
     els.answerInput.focus();
   }
 });
 
+function autoGrow() {
+  const ta = els.answerInput;
+  ta.style.height = "auto";
+  ta.style.height = Math.min(ta.scrollHeight, 192) + "px";
+}
+els.answerInput.addEventListener("input", () => {
+  autoGrow();
+  const w = els.answerInput.value.trim().split(/\s+/).filter(Boolean).length;
+  $("word-count").textContent = w ? `${w} words` : "";
+});
 els.answerInput.addEventListener("keydown", (e) => {
   if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); els.answerForm.requestSubmit(); }
 });
-
-els.answerInput.addEventListener("input", () => {
-  autoGrow();
-  const words = els.answerInput.value.trim().split(/\s+/).filter(Boolean).length;
-  document.getElementById("word-count").textContent = words ? `${words} words` : "";
-});
-
-// Skipping still spends a question (that's the point -- a real interview doesn't
-// hand back the time), but it beats the user stalling on a blank box.
-document.getElementById("skip-btn").addEventListener("click", () => {
+$("skip-btn").onclick = () => {
   els.answerInput.value = "I don't have experience with this yet.";
   els.answerForm.requestSubmit();
-});
+};
 
-// A refresh drops the session (it lives in the server process), so warn first.
+$("new-session-btn").onclick = () => {
+  if (state.sessionId && !state.report && !confirm("Leave this interview? Progress will be lost.")) return;
+  location.reload();
+};
 window.addEventListener("beforeunload", (e) => {
-  if (state.sessionId && !document.getElementById("screen-report").classList.contains("active")) {
-    e.preventDefault();
-    e.returnValue = "";
-  }
+  if (state.sessionId && !state.report) { e.preventDefault(); e.returnValue = ""; }
 });
 
-// ---- report ----
-function band(score) {
-  if (score >= 0.7) return { fill: "band-strong", pill: "pill-strong", label: "strong", ring: "var(--color-success)" };
-  if (score >= 0.5) return { fill: "band-mid", pill: "pill-mid", label: "developing", ring: "var(--color-warning)" };
-  return { fill: "band-weak", pill: "pill-weak", label: "needs work", ring: "var(--color-error)" };
-}
-
-// Plain-text export so the report survives outside this page (the session
-// itself doesn't -- it lives in the server process).
-document.getElementById("copy-report-btn").addEventListener("click", async () => {
-  if (!state.report) return;
-  const r = state.report;
-  const lines = [
-    `callback-ai session report`,
-    `Overall readiness: ${state.overall.toFixed(2)} / 1.00`,
-    ``,
-    r.overall_summary || "",
-    ``,
-    `Top things to fix: ${(r.top_fixes || []).join(", ") || "none"}`,
-    ``,
-    `--- Per competency ---`,
-    ...r.competency_reports.map((c) =>
-      `${c.competency}: ${c.score.toFixed(2)}\n  evidence: "${c.evidence_quote}"` +
-      (r.model_answers && r.model_answers[c.competency] ? `\n  stronger answer: ${r.model_answers[c.competency]}` : "")
-    ),
-  ];
-  const label = document.getElementById("copy-report-label");
-  try {
-    await navigator.clipboard.writeText(lines.join("\n"));
-    label.textContent = "Copied";
-  } catch {
-    label.textContent = "Copy failed";
-  }
-  setTimeout(() => { label.textContent = "Copy report"; }, 2000);
-});
-
-function statChip(label, value) {
-  return `<div class="panel-inset px-3 py-2 text-center"><div class="text-lg font-semibold font-mono-brand">${value}</div><div class="text-xs text-muted">${label}</div></div>`;
-}
+// ---------- report ----------
+function bandColor(s) { return s >= 0.7 ? "var(--success)" : s >= 0.5 ? "var(--warning)" : "var(--destructive)"; }
+function bandLabel(s) { return s >= 0.7 ? "strong" : s >= 0.5 ? "developing" : "needs work"; }
 
 async function loadReport() {
   const resp = await fetch(`${API}/sessions/${state.sessionId}/report`);
-  if (!resp.ok) { showError("Could not load the report."); return; }
+  if (!resp.ok) { toast("Could not load the report.", true); return; }
   const data = await resp.json();
-  const report = data.report;
-  const reports = report.competency_reports;
+  renderReport(data.report);
 
-  const overall = reports.reduce((s, r) => s + r.score, 0) / (reports.length || 1);
-  const b = band(overall);
+  const overall = data.report.competency_reports.reduce((s, r) => s + r.score, 0) / (data.report.competency_reports.length || 1);
+  addHistory({ id: state.sessionId, title: state.jobTitle || "Interview session", score: overall, report: data.report, at: Date.now() });
+}
+
+function renderReportFromHistory(item) {
+  els.setup.classList.add("hidden");
+  els.chat.classList.remove("hidden"); els.chat.classList.add("flex");
+  els.composer.classList.add("hidden");
+  $("rubric-panel").classList.add("hidden");
+  els.transcript.innerHTML = "";
+  state.sessionId = null; state.report = item.report;
+  renderReport(item.report);
+}
+
+function renderReport(report) {
   state.report = report;
-  state.overall = overall;
+  const reports = report.competency_reports;
+  const overall = reports.reduce((s, r) => s + r.score, 0) / (reports.length || 1);
+  const C = 2 * Math.PI * 54;
 
-  document.getElementById("report-score").textContent = overall.toFixed(2);
-  document.getElementById("report-verdict").textContent =
-    overall >= 0.7 ? "Interview-ready" : overall >= 0.5 ? "Getting there" : "Needs more prep";
-  document.getElementById("report-summary").textContent = report.overall_summary || "";
-  document.getElementById("ring-aria").setAttribute("aria-label", `Overall readiness ${overall.toFixed(2)} out of 1.00`);
-
-  // animate the ring after paint
-  const ring = document.getElementById("ring-value");
-  ring.setAttribute("stroke", b.ring);
-  requestAnimationFrame(() => {
-    ring.style.strokeDashoffset = String(RING_CIRCUMFERENCE * (1 - overall));
-  });
-
-  const strong = reports.filter((r) => r.score >= 0.7).length;
-  const weak = reports.filter((r) => r.score < 0.5).length;
-  document.getElementById("report-stats").innerHTML =
-    statChip("competencies", reports.length) + statChip("strong", strong) + statChip("to fix", weak);
-
-  const calloutEl = document.getElementById("report-callout");
-  calloutEl.innerHTML = "";
-  if (report.top_fixes && report.top_fixes.length) {
-    calloutEl.innerHTML = `<div class="panel p-4" style="border-color: color-mix(in srgb, var(--color-warning) 40%, transparent)">
-      <div class="kicker mb-2" style="color: var(--color-warning)">top things to fix</div>
-      <div class="flex flex-wrap gap-2">${report.top_fixes.map((f) => `<span class="badge badge-warning badge-outline">${f}</span>`).join("")}</div>
-    </div>`;
-  }
-
-  const list = document.getElementById("report-competencies");
-  list.innerHTML = "";
-  reports.forEach((r, idx) => {
-    const cb = band(r.score);
-    const pct = Math.round(r.score * 100);
-    const card = document.createElement("div");
-    card.className = "panel p-4";
-    card.innerHTML = `
-      <div class="flex justify-between items-center mb-2.5">
-        <span class="competency-name font-semibold text-sm">${r.competency}</span>
-        <div class="flex items-center gap-2">
-          <span class="band-pill ${cb.pill}">${cb.label}</span>
-          <span class="score-num font-semibold text-sm tabular-nums">${r.score.toFixed(2)}</span>
+  const card = document.createElement("div");
+  card.className = "fade-up mt-6 rounded-2xl border border-hair p-5 sm:p-6";
+  card.style.background = "color-mix(in oklch, var(--card) 70%, transparent)";
+  card.innerHTML = `
+    <div class="flex flex-col items-center gap-5 sm:flex-row sm:gap-7">
+      <div class="relative size-32 shrink-0" role="img" aria-label="Overall readiness ${overall.toFixed(2)} out of 1.00">
+        <svg width="128" height="128" viewBox="0 0 128 128" style="transform:rotate(-90deg)" aria-hidden="true">
+          <circle cx="64" cy="64" r="54" fill="none" stroke-width="10" stroke="color-mix(in oklch, var(--foreground) 10%, transparent)"/>
+          <circle id="ring" class="ring-value" cx="64" cy="64" r="54" fill="none" stroke-width="10" stroke-linecap="round"
+                  stroke="${bandColor(overall)}" stroke-dasharray="${C}" stroke-dashoffset="${C}"/>
+        </svg>
+        <div class="absolute inset-0 flex flex-col items-center justify-center">
+          <span class="font-mono text-3xl font-bold tabular-nums">${overall.toFixed(2)}</span>
+          <span class="text-[11px] text-muted-foreground">/ 1.00</span>
         </div>
       </div>
-      <div class="meter mb-3"><div class="meter-fill ${cb.fill}" data-pct="${pct}"></div></div>
-      <div class="chat-bubble-quote">&ldquo;${r.evidence_quote}&rdquo;</div>
-      ${r.low_confidence ? '<div class="text-xs text-muted mt-1.5">⚠ Low confidence score — evidence could not be fully verified.</div>' : ""}
-    `;
-    if (report.model_answers && report.model_answers[r.competency]) {
-      const details = document.createElement("details");
-      details.className = "collapse collapse-arrow bg-base-300 mt-3 rounded-lg";
-      details.innerHTML = `<summary class="collapse-title text-sm font-medium min-h-0 py-2.5 text-secondary">Stronger answer</summary><div class="collapse-content text-sm"></div>`;
-      details.querySelector(".collapse-content").textContent = report.model_answers[r.competency];
-      card.appendChild(details);
+      <div class="min-w-0 flex-1 text-center sm:text-left">
+        <div class="mb-1 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Session report</div>
+        <div class="mb-1.5 text-lg font-semibold">${overall >= 0.7 ? "Interview-ready" : overall >= 0.5 ? "Getting there" : "Needs more prep"}</div>
+        <p class="text-sm text-muted-foreground">${report.overall_summary || ""}</p>
+        ${report.top_fixes?.length ? `<div class="mt-3 flex flex-wrap justify-center gap-1.5 sm:justify-start">
+          ${report.top_fixes.map((f) => `<span class="rounded-full border px-2 py-0.5 text-[11px]" style="border-color:color-mix(in oklch, var(--warning) 40%, transparent);color:var(--warning)">${f}</span>`).join("")}
+        </div>` : ""}
+      </div>
+    </div>`;
+  els.transcript.appendChild(card);
+
+  const list = document.createElement("div");
+  list.className = "mt-4 space-y-2.5";
+  reports.forEach((r) => {
+    const pct = Math.round(r.score * 100);
+    const item = document.createElement("div");
+    item.className = "rounded-xl border border-hair p-4";
+    item.style.background = "color-mix(in oklch, var(--card) 55%, transparent)";
+    item.innerHTML = `
+      <div class="mb-2 flex items-center justify-between gap-2">
+        <span class="min-w-0 flex-1 truncate text-sm font-medium">${r.competency}</span>
+        <span class="rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide"
+              style="background:color-mix(in oklch, ${bandColor(r.score)} 15%, transparent);color:${bandColor(r.score)}">${bandLabel(r.score)}</span>
+        <span class="font-mono text-sm font-semibold tabular-nums">${r.score.toFixed(2)}</span>
+      </div>
+      <div class="mb-2.5 h-1.5 overflow-hidden rounded-full" style="background:color-mix(in oklch, var(--foreground) 10%, transparent)">
+        <div class="meter-fill h-full rounded-full" style="width:0;background:${bandColor(r.score)}"></div>
+      </div>
+      <p class="border-l-2 pl-2.5 font-mono text-xs leading-relaxed text-muted-foreground" style="border-color:color-mix(in oklch, var(--foreground) 15%, transparent)">“${r.evidence_quote}”</p>
+      ${r.low_confidence ? '<p class="mt-1.5 text-[11px] text-muted-foreground">Low confidence — evidence could not be fully verified.</p>' : ""}`;
+
+    if (report.model_answers?.[r.competency]) {
+      const d = document.createElement("details");
+      d.className = "group mt-2.5";
+      d.innerHTML = `<summary class="flex cursor-pointer list-none items-center gap-1.5 text-xs font-medium text-primary">
+          <svg class="transition-transform group-open:rotate-90" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="m9 18 6-6-6-6"/></svg>
+          Stronger answer
+        </summary><p class="mt-2 rounded-lg bg-secondary p-2.5 text-xs leading-relaxed"></p>`;
+      d.querySelector("p").textContent = report.model_answers[r.competency];
+      item.appendChild(d);
     }
-    list.appendChild(card);
-    // animate meter fill after insert
-    requestAnimationFrame(() => {
-      const fill = card.querySelector(".meter-fill");
-      setTimeout(() => { fill.style.width = pct + "%"; }, 60 * idx);
-    });
+    list.appendChild(item);
+    requestAnimationFrame(() => setTimeout(() => { item.querySelector(".meter-fill").style.width = pct + "%"; }, 80));
   });
+  els.transcript.appendChild(list);
+
+  const actions = document.createElement("div");
+  actions.className = "mt-4 flex gap-2 pb-6";
+  actions.innerHTML = `
+    <button id="copy-report" class="flex-1 rounded-lg border border-hair px-3 py-2 text-sm transition-colors hover:bg-secondary">Copy report</button>
+    <button onclick="location.reload()" class="flex-1 rounded-lg border border-hair px-3 py-2 text-sm transition-colors hover:bg-secondary">New interview</button>`;
+  els.transcript.appendChild(actions);
+
+  $("copy-report").onclick = async () => {
+    const lines = [
+      "callback-ai session report",
+      `Overall readiness: ${overall.toFixed(2)} / 1.00`, "",
+      report.overall_summary || "", "",
+      `Top things to fix: ${(report.top_fixes || []).join(", ") || "none"}`, "",
+      "--- Per competency ---",
+      ...reports.map((c) => `${c.competency}: ${c.score.toFixed(2)}\n  evidence: "${c.evidence_quote}"` +
+        (report.model_answers?.[c.competency] ? `\n  stronger answer: ${report.model_answers[c.competency]}` : "")),
+    ];
+    try { await navigator.clipboard.writeText(lines.join("\n")); toast("Report copied to clipboard."); }
+    catch { toast("Copy failed.", true); }
+  };
+
+  requestAnimationFrame(() => {
+    const ring = $("ring");
+    if (ring) ring.style.strokeDashoffset = String(C * (1 - overall));
+  });
+  card.scrollIntoView({ behavior: "smooth", block: "start" });
 }
+
+renderHistory();
 </script>
 </body>
 </html>
