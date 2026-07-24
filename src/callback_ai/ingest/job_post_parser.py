@@ -1,5 +1,5 @@
 """FR-1: job post -> weighted competencies. FR-3: caching by hash."""
-import json
+from callback_ai.llm.json_parse import parse_json_response
 
 from callback_ai.ingest.rubric_cache import get_cached, hash_job_post, put_cached
 from callback_ai.ingest.schemas import Competency, Rubric
@@ -29,7 +29,7 @@ def parse_job_post(job_post_text: str, chat: ChatProvider, use_cache: bool = Tru
         ],
         temperature=0.0,
     )
-    data = json.loads(raw)
+    data = parse_json_response(raw)
     rubric = Rubric(
         job_post_hash=job_post_hash,
         target_position=data.get("target_position"),

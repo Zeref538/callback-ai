@@ -1,5 +1,5 @@
 """FR-2: resume text -> claim inventory (projects, metrics, tech)."""
-import json
+from callback_ai.llm.json_parse import parse_json_response
 
 from callback_ai.ingest.schemas import Claim
 from callback_ai.llm.client import ChatProvider
@@ -20,5 +20,5 @@ def parse_resume(resume_text: str, chat: ChatProvider) -> list[Claim]:
         ],
         temperature=0.0,
     )
-    data = json.loads(raw)
+    data = parse_json_response(raw)
     return [Claim(source="resume", **c) for c in data["claims"]]

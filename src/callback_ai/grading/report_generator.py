@@ -2,7 +2,7 @@
 top-3 fixes. FR-10: each competency score is gated the same way as the live
 per-answer scores (same EvidenceGate instance, so the session's rejection
 rate is one number, not two)."""
-import json
+from callback_ai.llm.json_parse import parse_json_response
 
 from callback_ai.grading.model_answer import generate_model_answer
 from callback_ai.grading.schemas import CompetencyReport, Report
@@ -35,7 +35,7 @@ def _generate_competency_score(chat: ChatProvider, competency: str, description:
         [{"role": "system", "content": SYSTEM_PROMPT.format(competency=competency, description=description, transcript=transcript)}],
         temperature=0.0,
     )
-    return json.loads(raw)
+    return parse_json_response(raw)
 
 
 def generate_report(

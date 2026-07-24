@@ -1,5 +1,5 @@
 """Fetch a portfolio URL and extract project/skill claims (best-effort, no JS rendering)."""
-import json
+from callback_ai.llm.json_parse import parse_json_response
 from html.parser import HTMLParser
 
 import httpx
@@ -63,5 +63,5 @@ def parse_portfolio_link(url: str, chat: ChatProvider) -> list[Claim]:
         ],
         temperature=0.0,
     )
-    data = json.loads(raw)
+    data = parse_json_response(raw)
     return [Claim(source="portfolio", **c) for c in data["claims"]]

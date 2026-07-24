@@ -3,7 +3,7 @@ call that also produces the verbatim quote and the live per-answer feedback.
 Kept as a single call (not two) to protect NFR-2 latency and NIM's free-tier
 rate limit -- see plan section 2 for the two-call fallback if this doesn't
 hold up under real model behavior."""
-import json
+from callback_ai.llm.json_parse import parse_json_response
 
 from callback_ai.interview.evidence_gate import EvidenceGate, GateResult
 from callback_ai.interview.schemas import LiveFeedback, ScoredAnswer
@@ -27,7 +27,7 @@ def _generate(chat: ChatProvider, competency: str, description: str, question: s
         ],
         temperature=0.0,
     )
-    data = json.loads(raw)
+    data = parse_json_response(raw)
     return ScoredAnswer(
         coverage_score=data["coverage_score"],
         evidence_quote=data["evidence_quote"],
