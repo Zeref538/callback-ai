@@ -11,6 +11,14 @@ class StartSessionRequest(BaseModel):
     budget: int = settings.question_budget
 
 
+class InterviewerInfo(BaseModel):
+    key: str
+    name: str
+    role: str
+    opening: str
+    accent: str
+
+
 class StartSessionResponse(BaseModel):
     session_id: str
     question: str | None
@@ -18,6 +26,7 @@ class StartSessionResponse(BaseModel):
     competencies: list[str] = []
     budget: int = settings.question_budget
     conflicts: int = 0
+    interviewer: InterviewerInfo | None = None
 
 
 class AnswerRequest(BaseModel):

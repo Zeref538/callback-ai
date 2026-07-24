@@ -13,9 +13,11 @@
    Plain CSS on purpose: this page is served as one static file,
    so a build step or a runtime CSS framework would be a
    dependency that can fail (it did) for no benefit here.
-   Design language borrowed from the Aegix-AI frontend:
-   cinematic near-black oklch surfaces, bokeh orbs, hairline
-   borders, Inter. Emerald accent instead of Aegix's indigo.
+   Surface treatment follows the Aegix-AI frontend (cinematic
+   near-black oklch, hairline borders, Inter) with an emerald
+   accent instead of its indigo. The backdrop is this project's
+   own: a stage spotlight, since "callback" is the audition word
+   as much as the interview one.
    ============================================================ */
 
 :root {
@@ -32,9 +34,9 @@
   --warning: oklch(0.62 0.16 65);
   --success: oklch(0.55 0.15 158);
   --info: oklch(0.55 0.13 240);
-  --orb-a: oklch(0.55 0.15 158 / 0.10);
-  --orb-b: oklch(0.55 0.13 240 / 0.08);
-  --orb-c: oklch(0.6 0.14 300 / 0.07);
+  --beam-color: oklch(0.55 0.15 158 / 0.055);
+  --mote-color: oklch(0.45 0.10 158 / 0.30);
+  --vignette: oklch(0.90 0.01 286 / 0.55);
 }
 html.dark {
   --background: oklch(0.13 0.005 285);
@@ -49,9 +51,9 @@ html.dark {
   --warning: oklch(0.78 0.15 75);
   --success: oklch(0.72 0.16 158);
   --info: oklch(0.7 0.13 240);
-  --orb-a: oklch(0.72 0.16 158 / 0.16);
-  --orb-b: oklch(0.7 0.13 240 / 0.13);
-  --orb-c: oklch(0.72 0.14 300 / 0.10);
+  --beam-color: oklch(0.80 0.13 158 / 0.085);
+  --mote-color: oklch(0.92 0.06 158 / 0.55);
+  --vignette: oklch(0.08 0.006 285 / 0.92);
 }
 
 *, *::before, *::after { box-sizing: border-box; }
@@ -76,12 +78,62 @@ ul { list-style: none; padding: 0; }
 .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; }
 .hidden { display: none !important; }
 
-/* ---------- bokeh ---------- */
-.bokeh { position: fixed; inset: 0; z-index: -1; overflow: hidden; pointer-events: none; }
-.orb { position: absolute; border-radius: 9999px; will-change: transform; }
-@keyframes drift1 { 0%,100% { transform: translate3d(0,0,0);} 33% { transform: translate3d(60px,-45px,0);} 66% { transform: translate3d(-35px,50px,0);} }
-@keyframes drift2 { 0%,100% { transform: translate3d(0,0,0);} 33% { transform: translate3d(-55px,60px,0);} 66% { transform: translate3d(45px,-30px,0);} }
-@keyframes drift3 { 0%,100% { transform: translate3d(0,0,0);} 50% { transform: translate3d(70px,55px,0);} }
+/* ---------- stage ----------
+   "Callback" is the audition word as much as the interview one, so the
+   backdrop is a stage: one spotlight from above, dust drifting in the beam,
+   the room falling off to dark at the edges. Unique to this product rather
+   than the usual gradient blobs. All CSS, no canvas, no JS loop. */
+.stage { position: fixed; inset: 0; z-index: -1; overflow: hidden; pointer-events: none; }
+
+/* the beam: a cone of light widening toward the floor */
+.beam {
+  position: absolute; top: -14vh; left: 50%; transform: translateX(-50%);
+  width: 120vw; height: 118vh;
+  background: conic-gradient(from 180deg at 50% 0%,
+    transparent 0deg, transparent 158deg,
+    color-mix(in oklch, var(--beam-color) 62%, transparent) 172deg,
+    var(--beam-color) 180deg,
+    color-mix(in oklch, var(--beam-color) 62%, transparent) 188deg,
+    transparent 202deg, transparent 360deg);
+  filter: blur(38px);
+  animation: sway 19s ease-in-out infinite;
+  transform-origin: 50% 0%;
+}
+/* hot spot where the lamp itself sits */
+.lamp {
+  position: absolute; top: -18vh; left: 50%; transform: translateX(-50%);
+  width: 60vw; height: 46vh; border-radius: 50%;
+  background: radial-gradient(ellipse at 50% 40%, color-mix(in oklch, var(--beam-color) 190%, transparent), transparent 68%);
+  filter: blur(52px);
+}
+/* pool of light on the floor */
+.pool {
+  position: absolute; bottom: -22vh; left: 50%; transform: translateX(-50%);
+  width: 96vw; height: 52vh; border-radius: 50%;
+  background: radial-gradient(ellipse at 50% 50%, color-mix(in oklch, var(--beam-color) 120%, transparent), transparent 70%);
+  filter: blur(60px);
+}
+.vignette {
+  position: absolute; inset: 0;
+  background: radial-gradient(ellipse 90% 75% at 50% 35%, transparent 40%, var(--vignette) 100%);
+}
+@keyframes sway {
+  0%, 100% { transform: translateX(-50%) rotate(-1.1deg); }
+  50%      { transform: translateX(-50%) rotate(1.1deg); }
+}
+
+/* dust motes caught in the beam */
+.mote {
+  position: absolute; border-radius: 50%;
+  background: var(--mote-color);
+  animation: float linear infinite;
+}
+@keyframes float {
+  0%   { transform: translate3d(0, 12vh, 0); opacity: 0; }
+  12%  { opacity: 1; }
+  88%  { opacity: 1; }
+  100% { transform: translate3d(22px, -104vh, 0); opacity: 0; }
+}
 
 /* ---------- shell ---------- */
 .shell { display: flex; min-height: 100svh; }
@@ -141,6 +193,10 @@ ul { list-style: none; padding: 0; }
   border: 1px solid var(--border);
   background: color-mix(in oklch, var(--card) 60%, transparent);
 }
+.who-row { display: flex; align-items: center; gap: .5rem; padding-bottom: .625rem; margin-bottom: .625rem; border-bottom: 1px solid var(--border); }
+.who-row .avatar { width: 1.6rem; height: 1.6rem; font-size: 11px; }
+.who-name { font-size: 12px; font-weight: 600; line-height: 1.2; }
+.who-role { font-size: 10px; text-transform: uppercase; letter-spacing: .05em; color: var(--muted-fg); }
 .rubric-head { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: .5rem; }
 .eyebrow { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; color: var(--muted-fg); }
 .rail { display: flex; gap: 3px; margin-bottom: .75rem; }
@@ -216,15 +272,34 @@ details > summary::-webkit-details-marker { display: none; }
 details[open] > summary .disclosure svg { transform: rotate(90deg); }
 
 .persona-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: .5rem; }
+@media (max-width: 520px) { .persona-grid { grid-template-columns: 1fr; } }
 .persona {
-  padding: .6rem; border-radius: .5rem; text-align: left;
+  position: relative; padding: .75rem .7rem; border-radius: .625rem; text-align: left;
   border: 1px solid var(--border); background: var(--secondary);
-  transition: border-color .15s, background .15s;
+  transition: border-color .15s, background .15s, transform .1s;
 }
-.persona:hover { border-color: color-mix(in oklch, var(--primary) 50%, transparent); }
-.persona[aria-pressed="true"] { border-color: var(--primary); background: color-mix(in oklch, var(--primary) 12%, transparent); }
-.persona b { display: block; font-size: 12px; font-weight: 600; }
-.persona span { font-size: 11px; line-height: 1.35; color: var(--muted-fg); }
+.persona:hover { border-color: color-mix(in oklch, var(--who, var(--primary)) 55%, transparent); transform: translateY(-1px); }
+.persona[aria-pressed="true"] {
+  border-color: var(--who, var(--primary));
+  background: color-mix(in oklch, var(--who, var(--primary)) 12%, transparent);
+}
+.persona[aria-pressed="true"]::after {
+  content: ""; position: absolute; top: .6rem; right: .6rem; width: 7px; height: 7px;
+  border-radius: 50%; background: var(--who, var(--primary));
+  box-shadow: 0 0 0 3px color-mix(in oklch, var(--who, var(--primary)) 25%, transparent);
+}
+.persona-top { display: flex; align-items: center; gap: .5rem; margin-bottom: .4rem; }
+.avatar {
+  width: 1.75rem; height: 1.75rem; border-radius: 50%; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 12px; font-weight: 700; letter-spacing: -.01em;
+  background: color-mix(in oklch, var(--who, var(--primary)) 22%, transparent);
+  color: var(--who, var(--primary));
+  border: 1px solid color-mix(in oklch, var(--who, var(--primary)) 45%, transparent);
+}
+.persona-name { font-size: 13px; font-weight: 600; line-height: 1.15; }
+.persona-role { font-size: 10px; text-transform: uppercase; letter-spacing: .05em; color: var(--muted-fg); }
+.persona-blurb { font-size: 11px; line-height: 1.4; color: var(--muted-fg); }
 
 /* ---------- chat ---------- */
 .transcript { flex: 1; padding-bottom: 1rem; }
@@ -237,6 +312,7 @@ details[open] > summary .disclosure svg { transform: rotate(90deg); }
   background: var(--primary); color: var(--primary-fg);
 }
 .msg-role { font-size: 12px; font-weight: 500; color: var(--muted-fg); }
+.msg-opening { color: var(--muted-fg); font-style: italic; border-left: 2px solid color-mix(in oklch, var(--foreground) 15%, transparent); padding-left: .75rem; }
 .msg-q { font-size: 15px; line-height: 1.6; }
 .row-end { display: flex; justify-content: flex-end; }
 .bubble-a {
@@ -288,7 +364,8 @@ details[open] > summary .disclosure svg { transform: rotate(90deg); }
 .ring-center { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; }
 .ring-num { font-family: 'JetBrains Mono', monospace; font-size: 1.75rem; font-weight: 700; font-variant-numeric: tabular-nums; }
 .report-side { flex: 1; min-width: 0; text-align: center; }
-.report-verdict { font-size: 1.125rem; font-weight: 600; margin: .25rem 0 .35rem; }
+.report-verdict { font-size: 1.125rem; font-weight: 600; margin: .25rem 0 .2rem; }
+.report-verdict-sub { font-size: 13px; color: var(--muted-fg); margin-bottom: .4rem; }
 .report-summary { font-size: 14px; color: var(--muted-fg); }
 .chips { display: flex; flex-wrap: wrap; gap: .35rem; margin-top: .75rem; justify-content: center; }
 @media (min-width: 640px) { .chips { justify-content: flex-start; } }
@@ -319,18 +396,19 @@ details[open] > summary .disclosure svg { transform: rotate(90deg); }
 .fade-up { animation: fadeUp .3s cubic-bezier(.16,1,.3,1); }
 @keyframes fadeUp { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
 @media (prefers-reduced-motion: reduce) {
-  .fade-up, .orb { animation: none !important; }
+  .fade-up, .beam, .mote { animation: none !important; }
   .ring-value, .meter-fill { transition: none; }
 }
 </style>
 </head>
 <body>
 
-<div class="bokeh" aria-hidden="true">
-  <div class="orb" style="left:6%;top:10%;width:380px;height:380px;background:var(--orb-a);filter:blur(76px);animation:drift1 34s ease-in-out infinite"></div>
-  <div class="orb" style="left:74%;top:4%;width:300px;height:300px;background:var(--orb-b);filter:blur(60px);animation:drift2 41s ease-in-out infinite"></div>
-  <div class="orb" style="left:62%;top:62%;width:420px;height:420px;background:var(--orb-a);filter:blur(84px);animation:drift3 47s ease-in-out infinite"></div>
-  <div class="orb" style="left:18%;top:74%;width:240px;height:240px;background:var(--orb-c);filter:blur(48px);animation:drift2 38s ease-in-out infinite"></div>
+<div class="stage" aria-hidden="true">
+  <div class="beam"></div>
+  <div class="lamp"></div>
+  <div class="pool"></div>
+  <div class="motes" id="motes"></div>
+  <div class="vignette"></div>
 </div>
 
 <div class="shell">
@@ -363,6 +441,7 @@ details[open] > summary .disclosure svg { transform: rotate(90deg); }
          This agent allocates 12 questions across weighted competencies and
          re-decides after every answer, so the sidebar shows it happening. -->
     <div class="rubric hidden" id="rubric-panel">
+      <div class="who-row" id="who-row"></div>
       <div class="rubric-head">
         <span class="eyebrow">Question budget</span>
         <span class="mono" style="font-size:11px;color:var(--muted-fg)"><span id="budget-used">0</span>/<span id="budget-total">12</span></span>
@@ -404,8 +483,9 @@ details[open] > summary .disclosure svg { transform: rotate(90deg); }
       <!-- ===== SETUP ===== -->
       <section class="setup fade-up" id="screen-setup">
         <div class="hero">
-          <h1>An interviewer that<br>actually <em>follows up</em>.</h1>
-          <p>Paste a role and your background. It derives a rubric, spends 12 questions where you're weakest, and cites a verbatim quote for every score.</p>
+          <p class="eyebrow" style="margin-bottom:.75rem">Mock interviews that push back</p>
+          <h1>Most prep tools ask questions.<br><em>Ours asks again.</em></h1>
+          <p>Say "I improved performance" and you'll be asked by how much, and how you measured it — because that follow-up is where real interviews are won or lost. Twelve questions, spent where you're weakest, and every score has to quote you word for word.</p>
         </div>
 
         <form class="card" id="setup-form" novalidate>
@@ -439,16 +519,28 @@ details[open] > summary .disclosure svg { transform: rotate(90deg); }
           </details>
 
           <div class="field">
-            <label style="display:block;margin-bottom:.5rem">Interviewer</label>
-            <div class="persona-grid" role="group" aria-label="Interviewer persona">
-              <button type="button" class="persona" data-persona="friendly" aria-pressed="false">
-                <b>Friendly</b><span>Softer follow-ups</span>
+            <label style="display:block;margin-bottom:.5rem">Who's interviewing you?</label>
+            <div class="persona-grid" role="group" aria-label="Choose your interviewer">
+              <button type="button" class="persona" data-persona="friendly" aria-pressed="false" style="--who:var(--info)">
+                <span class="persona-top">
+                  <span class="avatar">M</span>
+                  <span><span class="persona-name">Mira</span><br><span class="persona-role">Eng Manager</span></span>
+                </span>
+                <span class="persona-blurb">Warm and patient. Gives you room to think.</span>
               </button>
-              <button type="button" class="persona" data-persona="neutral" aria-pressed="true">
-                <b>Neutral</b><span>Standard probing</span>
+              <button type="button" class="persona" data-persona="neutral" aria-pressed="true" style="--who:var(--primary)">
+                <span class="persona-top">
+                  <span class="avatar">S</span>
+                  <span><span class="persona-name">Sam</span><br><span class="persona-role">Senior Eng</span></span>
+                </span>
+                <span class="persona-blurb">Plain and professional. No flattery.</span>
               </button>
-              <button type="button" class="persona" data-persona="adversarial" aria-pressed="false">
-                <b>Adversarial</b><span>Presses on numbers</span>
+              <button type="button" class="persona" data-persona="adversarial" aria-pressed="false" style="--who:var(--warning)">
+                <span class="persona-top">
+                  <span class="avatar">R</span>
+                  <span><span class="persona-name">Rook</span><br><span class="persona-role">Principal Eng</span></span>
+                </span>
+                <span class="persona-blurb">Skeptical. Wants numbers, notices when you lack them.</span>
               </button>
             </div>
           </div>
@@ -494,6 +586,25 @@ const els = {
   sendBtn: $("send-btn"), startBtn: $("start-btn"), startBtnLabel: $("start-btn-label"),
   setup: $("screen-setup"), chat: $("screen-chat"), composer: $("composer-wrap"),
 };
+
+// ---------- dust motes in the beam ----------
+// Generated rather than hand-written so they don't fall in a visible pattern.
+// Skipped entirely under reduced-motion: this is pure atmosphere.
+(function seedMotes() {
+  if (matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+  const host = document.getElementById("motes");
+  const count = innerWidth < 640 ? 14 : 30;
+  let html = "";
+  for (let i = 0; i < count; i++) {
+    const size = (Math.random() * 2.2 + 0.8).toFixed(1);
+    const left = (28 + Math.random() * 44).toFixed(1);   // clustered in the beam
+    const dur = (26 + Math.random() * 34).toFixed(1);
+    const delay = (-Math.random() * 50).toFixed(1);      // negative = already mid-flight
+    html += `<div class="mote" style="left:${left}%;bottom:-6vh;width:${size}px;height:${size}px;` +
+            `animation-duration:${dur}s;animation-delay:${delay}s"></div>`;
+  }
+  host.innerHTML = html;
+})();
 
 // ---------- theme ----------
 function applyTheme(t) {
@@ -605,6 +716,12 @@ function renderRubricPanel() {
   $("budget-total").textContent = state.budget;
   $("budget-used").textContent = state.turn;
 
+  const who = state.interviewer;
+  $("who-row").innerHTML = who
+    ? `<span class="avatar" style="--who:${who.accent}">${who.name[0]}</span>
+       <span><span class="who-name">${who.name}</span><br><span class="who-role">${who.role}</span></span>`
+    : "";
+
   const rail = $("budget-rail");
   rail.innerHTML = "";
   for (let i = 0; i < state.budget; i++) {
@@ -626,10 +743,14 @@ function renderRubricPanel() {
 }
 
 // ---------- chat rendering ----------
-function bubbleQuestion(text) {
+function bubbleQuestion(text, opts) {
+  const who = state.interviewer || { name: "Interviewer", accent: "var(--primary)" };
   const div = document.createElement("div");
   div.className = "fade-up";
-  div.innerHTML = `<div class="msg-head"><div class="msg-avatar">&gt;_</div><span class="msg-role">Interviewer</span></div><div class="msg-q"></div>`;
+  div.innerHTML = `<div class="msg-head">
+      <div class="avatar" style="--who:${who.accent};width:1.5rem;height:1.5rem;font-size:11px">${who.name[0]}</div>
+      <span class="msg-role">${who.name}${opts && opts.role ? ` · ${opts.role}` : ""}</span>
+    </div><div class="msg-q${opts && opts.opening ? " msg-opening" : ""}"></div>`;
   div.querySelector(".msg-q").textContent = text;
   els.transcript.appendChild(div);
   div.scrollIntoView({ behavior: "smooth", block: "end" });
@@ -707,6 +828,7 @@ $("setup-form").addEventListener("submit", async (e) => {
     Object.assign(state, {
       sessionId: data.session_id, competencies: data.competencies, budget: data.budget || 12,
       turn: 1, spend: {}, currentCompetency: data.competency, report: null,
+      interviewer: data.interviewer,
       jobTitle: jobPost.split("\n")[0].slice(0, 42),
     });
     state.spend[data.competency] = 1;
@@ -726,6 +848,11 @@ $("setup-form").addEventListener("submit", async (e) => {
     }
 
     renderRubricPanel();
+    // Interviewer introduces themselves before the first question. Scripted
+    // server-side, so it costs no tokens and always sounds like that persona.
+    if (data.interviewer && data.interviewer.opening) {
+      bubbleQuestion(data.interviewer.opening, { role: data.interviewer.role, opening: true });
+    }
     bubbleQuestion(data.question);
     els.answerInput.focus();
   } catch (err) {
@@ -833,10 +960,20 @@ function renderReportFromHistory(item) {
   renderReport(item.report);
 }
 
+// The product is named for the callback you're trying to earn, so the verdict
+// speaks in that language instead of "score: 0.62".
+const VERDICT_LINE = {
+  callback: { headline: "You'd get the callback", sub: "Specific, evidenced answers across the board. Keep the receipts handy." },
+  maybe:    { headline: "It'd be a close call", sub: "Enough substance to stay in the room, not enough to be the obvious yes." },
+  no:       { headline: "Not a callback yet", sub: "The stories are there — the specifics aren't. That's a fixable problem." },
+};
+
 function renderReport(report) {
   state.report = report;
   const reports = report.competency_reports;
   const overall = reports.reduce((s, r) => s + r.score, 0) / (reports.length || 1);
+  const verdictKey = overall >= 0.7 ? "callback" : overall >= 0.5 ? "maybe" : "no";
+  const who = state.interviewer;
   const C = 2 * Math.PI * 54;
 
   const card = document.createElement("div");
@@ -856,8 +993,9 @@ function renderReport(report) {
         </div>
       </div>
       <div class="report-side">
-        <div class="eyebrow">Session report</div>
-        <div class="report-verdict">${overall >= 0.7 ? "Interview-ready" : overall >= 0.5 ? "Getting there" : "Needs more prep"}</div>
+        <div class="eyebrow">The debrief${who ? ` · ${who.name}'s read` : ""}</div>
+        <div class="report-verdict">${VERDICT_LINE[verdictKey].headline}</div>
+        <p class="report-verdict-sub">${VERDICT_LINE[verdictKey].sub}</p>
         <p class="report-summary"></p>
         ${report.top_fixes && report.top_fixes.length ? `<div class="chips">${report.top_fixes.map((f) =>
           `<span class="chip" style="border-color:color-mix(in oklch, var(--warning) 40%, transparent);color:var(--warning)"></span>`).join("")}</div>` : ""}

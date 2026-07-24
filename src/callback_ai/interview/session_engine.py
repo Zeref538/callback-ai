@@ -63,7 +63,8 @@ class InterviewSession:
         self._started = True
         self.logger.log(
             "session_start",
-            persona=self.persona.name,
+            persona=self.persona.key,  # the key, not the display name -- logs must stay replayable
+            interviewer=self.persona.name,
             budget=self.budget,
             competencies=list(self.competencies_by_name),
         )

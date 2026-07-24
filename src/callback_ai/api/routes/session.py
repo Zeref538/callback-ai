@@ -6,7 +6,13 @@ concurrent users or to survive a server restart.
 """
 from fastapi import APIRouter, HTTPException
 
-from callback_ai.api.schemas import AnswerRequest, AnswerResponse, StartSessionRequest, StartSessionResponse
+from callback_ai.api.schemas import (
+    AnswerRequest,
+    AnswerResponse,
+    InterviewerInfo,
+    StartSessionRequest,
+    StartSessionResponse,
+)
 from callback_ai.grading.report_generator import generate_report
 from callback_ai.ingest.claim_merger import merge_claims
 from callback_ai.ingest.job_post_parser import parse_job_post
@@ -45,6 +51,7 @@ def start_session(req: StartSessionRequest) -> StartSessionResponse:
     SESSIONS[logger.session_id] = session
 
     question = session.next_question()
+    persona = session.persona
     return StartSessionResponse(
         session_id=logger.session_id,
         question=question,
@@ -52,6 +59,10 @@ def start_session(req: StartSessionRequest) -> StartSessionResponse:
         competencies=[c.name for c in rubric.competencies],
         budget=req.budget,
         conflicts=len(inventory.conflicts),
+        interviewer=InterviewerInfo(
+            key=persona.key, name=persona.name, role=persona.role,
+            opening=persona.opening, accent=persona.accent,
+        ),
     )
 
 
