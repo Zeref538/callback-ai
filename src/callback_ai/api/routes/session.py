@@ -14,7 +14,7 @@ from callback_ai.ingest.portfolio_parser import parse_portfolio_link
 from callback_ai.ingest.resume_parser import parse_resume
 from callback_ai.interview.persona import get_persona
 from callback_ai.interview.session_engine import InterviewSession
-from callback_ai.llm.router import Router
+from callback_ai.llm.router import build_chat
 from callback_ai.memory.delta import compute_delta
 from callback_ai.memory.profile_store import load_profile, update_profile
 from callback_ai.memory.session_store import SessionLogger
@@ -26,7 +26,7 @@ SESSIONS: dict[str, InterviewSession] = {}
 
 @router.post("/sessions", response_model=StartSessionResponse)
 def start_session(req: StartSessionRequest) -> StartSessionResponse:
-    chat = Router()
+    chat = build_chat()
     rubric = parse_job_post(req.job_post, chat)
 
     resume_claims = parse_resume(req.resume, chat) if req.resume else []

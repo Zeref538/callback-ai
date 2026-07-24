@@ -9,6 +9,9 @@ load_dotenv()
 
 @dataclass(frozen=True)
 class Settings:
+    # "nim" (default) or "mock" -- mock runs the whole app offline with no API key.
+    provider: str = os.getenv("CALLBACK_AI_PROVIDER", "nim").lower()
+
     nim_api_key: str = os.getenv("NIM_API_KEY", "")
     nim_base_url: str = os.getenv("NIM_BASE_URL", "https://integrate.api.nvidia.com/v1")
     nim_model: str = os.getenv("NIM_MODEL", "meta/llama-3.1-70b-instruct")

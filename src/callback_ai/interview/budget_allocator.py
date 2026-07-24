@@ -29,12 +29,21 @@ def init_state(competencies: list[Competency]) -> dict[str, CompetencyState]:
 
 
 def allocate_next_competency(state: dict[str, CompetencyState]) -> str:
-    """Highest weight*uncertainty wins; competencies at the per-competency ask
-    cap are excluded so budget doesn't collapse onto a single weak area."""
+    """Cover every competency once, then spend what's left on the weakest.
+
+    Coverage comes first because a weak answer raises that competency's
+    uncertainty, which on a pure weight*uncertainty ranking makes it win the
+    next turn too -- the budget collapses onto the first few competencies and
+    the rest are never asked about at all. A competency that was never asked
+    can't be scored in the report, so unasked always outranks weak.
+    """
     eligible = {name: s for name, s in state.items() if s.asked_count < MAX_ASKS_PER_COMPETENCY}
     if not eligible:
         eligible = state  # cap hit everywhere (small rubric) -- allow overflow rather than crash
-    return max(eligible, key=lambda name: eligible[name].priority)
+
+    # Sort key: unasked first, then highest weight*uncertainty. max() is stable,
+    # so equal keys keep rubric order and the choice stays deterministic (NFR-5).
+    return max(eligible, key=lambda name: (eligible[name].asked_count == 0, eligible[name].priority))
 
 
 def update_after_answer(state: dict[str, CompetencyState], competency: str, coverage_score: float) -> None:

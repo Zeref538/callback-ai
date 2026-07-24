@@ -2,8 +2,17 @@
 from typing import Protocol
 
 
-class RateLimitedError(Exception):
+class ProviderError(Exception):
+    """Any provider failure that should surface to the user as a readable
+    message rather than an httpx traceback."""
+
+
+class RateLimitedError(ProviderError):
     """Raised by a provider on 429 so the router can fall back."""
+
+
+class AuthError(ProviderError):
+    """Missing/invalid API key -- falling back to a local model won't help."""
 
 
 class ChatProvider(Protocol):

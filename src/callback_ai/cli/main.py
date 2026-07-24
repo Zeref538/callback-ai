@@ -9,7 +9,7 @@ from callback_ai.ingest.portfolio_parser import parse_portfolio_link
 from callback_ai.ingest.resume_parser import parse_resume
 from callback_ai.interview.persona import get_persona
 from callback_ai.interview.session_engine import InterviewSession
-from callback_ai.llm.router import Router
+from callback_ai.llm.router import build_chat
 from callback_ai.memory.session_store import SessionLogger
 
 
@@ -27,7 +27,7 @@ def main() -> None:
     parser.add_argument("--budget", type=int, default=settings.question_budget)
     args = parser.parse_args()
 
-    chat = Router()
+    chat = build_chat()
     rubric = parse_job_post(args.job_post.read_text(encoding="utf-8"), chat)
 
     resume_claims = parse_resume(args.resume.read_text(encoding="utf-8"), chat) if args.resume else []

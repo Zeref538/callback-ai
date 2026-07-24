@@ -26,7 +26,7 @@ REPORT_SCORE_RESPONSE = json.dumps({"score": 0.8, "evidence_quote": ANSWER_TEXT}
 def test_full_session_via_api(tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
     fake_chat = FakeChat([JOB_POST_RESPONSE, QUESTION_RESPONSE, SCORE_RESPONSE, REPORT_SCORE_RESPONSE])
-    monkeypatch.setattr(session_routes, "Router", lambda: fake_chat)
+    monkeypatch.setattr(session_routes, "build_chat", lambda: fake_chat)
     session_routes.SESSIONS.clear()
 
     client = TestClient(app)
@@ -56,7 +56,7 @@ def test_full_session_via_api(tmp_path, monkeypatch):
 def test_report_before_done_returns_409(tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
     fake_chat = FakeChat([JOB_POST_RESPONSE, QUESTION_RESPONSE])
-    monkeypatch.setattr(session_routes, "Router", lambda: fake_chat)
+    monkeypatch.setattr(session_routes, "build_chat", lambda: fake_chat)
     session_routes.SESSIONS.clear()
 
     client = TestClient(app)
