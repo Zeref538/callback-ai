@@ -388,11 +388,28 @@ details[open] > summary .disclosure svg { transform: rotate(90deg); }
 .mic-btn.listening { color: var(--danger); border-color: var(--danger); background: color-mix(in oklch, var(--danger) 12%, transparent); animation: micpulse 1.2s ease-in-out infinite; }
 @keyframes micpulse { 0%,100% { box-shadow: 0 0 0 0 color-mix(in oklch, var(--danger) 40%, transparent); } 50% { box-shadow: 0 0 0 5px transparent; } }
 @media (prefers-reduced-motion: reduce) { .mic-btn.listening { animation: none; } }
-.speaking-badge { display: inline-flex; align-items: center; gap: .35rem; font-size: 11px; color: var(--primary); margin-left: .5rem; }
-.speaking-badge .bar { width: 2px; height: 9px; background: currentColor; border-radius: 1px; animation: eq .9s ease-in-out infinite; }
-.speaking-badge .bar:nth-child(2) { animation-delay: .15s; } .speaking-badge .bar:nth-child(3) { animation-delay: .3s; }
-@keyframes eq { 0%,100% { height: 4px; } 50% { height: 11px; } }
-@media (prefers-reduced-motion: reduce) { .speaking-badge .bar { animation: none; } }
+/* Audio visualizer shown while the interviewer's voice plays. We can't tap
+   speechSynthesis' output into a Web Audio analyser (browsers don't expose
+   it), so the bars are organically animated (varied per-bar duration/delay)
+   rather than truly amplitude-driven -- reads as live audio without a mic tap.
+   ponytail: decorative-only; wire a real AnalyserNode if we ever move to a
+   streaming TTS API whose audio we control. */
+.voice-viz {
+  display: flex; align-items: center; justify-content: center; gap: 3px;
+  width: fit-content; margin: 0 auto .55rem; padding: .4rem .8rem;
+  border-radius: 999px; font-size: 11px; font-weight: 500;
+  color: var(--primary);
+  border: 1px solid color-mix(in oklch, var(--primary) 32%, transparent);
+  background: color-mix(in oklch, var(--primary) 10%, transparent);
+  box-shadow: 0 0 20px -6px color-mix(in oklch, var(--primary) 45%, transparent);
+}
+.voice-viz .vbar {
+  width: 3px; height: 5px; border-radius: 2px; background: currentColor;
+  animation: viz 900ms ease-in-out infinite;
+}
+.voice-viz .vlabel { margin-left: .45rem; opacity: .9; }
+@keyframes viz { 0%, 100% { height: 4px; opacity: .55; } 50% { height: 17px; opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .voice-viz .vbar { animation: none; height: 10px; } }
 
 /* ---------- report ---------- */
 .report-hero { display: flex; flex-direction: column; align-items: center; gap: 1.25rem; }
@@ -608,6 +625,7 @@ details[open] > summary .disclosure svg { transform: rotate(90deg); }
 
     <div class="composer-wrap hidden" id="composer-wrap">
       <div class="composer-inner">
+        <div class="voice-viz hidden" id="voice-viz" aria-hidden="true"></div>
         <form class="composer" id="answer-form">
           <label for="answer-input" class="sr-only">Your answer</label>
           <button type="button" class="mic-btn hidden" id="mic-btn" aria-label="Answer by voice">
@@ -780,16 +798,22 @@ function speakQuestion(text) {
 }
 
 function showSpeaking(on) {
-  document.querySelectorAll(".speaking-badge").forEach((b) => b.remove());
-  if (!on) return;
-  const last = els.transcript.querySelector(".msg-role:last-of-type") ||
-    [...els.transcript.querySelectorAll(".msg-role")].pop();
-  if (last) {
-    const badge = document.createElement("span");
-    badge.className = "speaking-badge";
-    badge.innerHTML = '<span class="bar"></span><span class="bar"></span><span class="bar"></span>speaking';
-    last.after(badge);
+  const viz = $("voice-viz");
+  if (!on) { viz.classList.add("hidden"); return; }
+  const who = state.interviewer;
+  if (!viz.dataset.built) {
+    // 9 bars, each with its own tempo/phase so the waveform never looks looped.
+    let bars = "";
+    for (let i = 0; i < 9; i++) {
+      const dur = (620 + Math.random() * 520).toFixed(0);
+      const delay = (-Math.random() * 900).toFixed(0);
+      bars += `<span class="vbar" style="animation-duration:${dur}ms;animation-delay:${delay}ms"></span>`;
+    }
+    viz.innerHTML = bars + '<span class="vlabel"></span>';
+    viz.dataset.built = "1";
   }
+  viz.querySelector(".vlabel").textContent = who ? `${who.name} is speaking…` : "speaking…";
+  viz.classList.remove("hidden");
 }
 
 function setVoiceEnabled(on) {
