@@ -204,12 +204,7 @@ ul { list-style: none; padding: 0; }
 .who-row .avatar { width: 1.6rem; height: 1.6rem; font-size: 11px; }
 .who-name { font-size: 12px; font-weight: 600; line-height: 1.2; }
 .who-role { font-size: 10px; text-transform: uppercase; letter-spacing: .05em; color: var(--muted-fg); }
-.rubric-head { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: .5rem; }
 .eyebrow { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; color: var(--muted-fg); }
-.rail { display: flex; gap: 3px; margin-bottom: .75rem; }
-.tick { flex: 1; height: 4px; border-radius: 2px; background: color-mix(in oklch, var(--foreground) 12%, transparent); transition: background .3s; }
-.tick.spent { background: color-mix(in oklch, var(--foreground) 45%, transparent); }
-.tick.active { background: var(--primary); box-shadow: 0 0 8px color-mix(in oklch, var(--primary) 60%, transparent); }
 .comp-row { display: flex; align-items: center; gap: .5rem; margin-bottom: .4rem; font-size: 12px; }
 .comp-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; background: color-mix(in oklch, var(--foreground) 25%, transparent); }
 .comp-row.current .comp-dot { background: var(--primary); }
@@ -484,17 +479,12 @@ details[open] > summary .disclosure svg { transform: rotate(90deg); }
       </button>
     </div>
 
-    <!-- THE TWIST: a generic chat UI has no concept of a question budget.
-         This agent allocates 12 questions across weighted competencies and
-         re-decides after every answer, so the sidebar shows it happening. -->
+    <!-- The agent re-decides which competency to probe after every answer.
+         We surface *where the focus is going*, not a visible question countdown
+         -- the budget stays internal so the interview feels open-ended. -->
     <div class="rubric hidden" id="rubric-panel">
       <div class="who-row" id="who-row"></div>
-      <div class="rubric-head">
-        <span class="eyebrow">Question budget</span>
-        <span class="mono" style="font-size:11px;color:var(--muted-fg)"><span id="budget-used">0</span>/<span id="budget-total">12</span></span>
-      </div>
-      <div class="rail" id="budget-rail"></div>
-      <div class="eyebrow" style="margin-bottom:.4rem">Competencies</div>
+      <div class="eyebrow" style="margin-bottom:.5rem">What we're digging into</div>
       <ul id="competency-list"></ul>
     </div>
 
@@ -961,22 +951,12 @@ $("clear-history").onclick = () => { localStorage.removeItem(HISTORY_KEY); rende
 // ---------- rubric rail ----------
 function renderRubricPanel() {
   $("rubric-panel").classList.remove("hidden");
-  $("budget-total").textContent = state.budget;
-  $("budget-used").textContent = state.turn;
 
   const who = state.interviewer;
   $("who-row").innerHTML = who
     ? `<span class="avatar" style="--who:${who.accent}">${who.name[0]}</span>
        <span><span class="who-name">${who.name}</span><br><span class="who-role">${who.role}</span></span>`
     : "";
-
-  const rail = $("budget-rail");
-  rail.innerHTML = "";
-  for (let i = 0; i < state.budget; i++) {
-    const t = document.createElement("div");
-    t.className = "tick" + (i < state.turn - 1 ? " spent" : i === state.turn - 1 ? " active" : "");
-    rail.appendChild(t);
-  }
 
   const list = $("competency-list");
   list.innerHTML = "";
