@@ -348,7 +348,7 @@ details[open] > summary .disclosure svg { transform: rotate(90deg); }
 .composer-inner { width: 100%; max-width: 48rem; margin: 0 auto; padding: .75rem 1rem; }
 @media (min-width: 640px) { .composer-inner { padding-inline: 1.5rem; } }
 .composer {
-  display: flex; align-items: flex-end; gap: .5rem;
+  display: flex; align-items: center; gap: .5rem;
   padding: .5rem; border: 1px solid var(--border); border-radius: .75rem; background: var(--card);
 }
 .composer textarea {
@@ -998,16 +998,35 @@ function initRecognizer() {
     els.answerInput.value = (base ? base + " " : "") + interim;
     els.answerInput.dispatchEvent(new Event("input"));
   };
-  r.onerror = (e) => { if (e.error !== "aborted") toast(`Mic: ${e.error}`, true); };
+  r.onerror = (e) => {
+    voice.listening = false; $("mic-btn").classList.remove("listening");
+    if (e.error === "aborted") return;
+    const msg = {
+      "not-allowed": "Microphone blocked. Allow mic access for this site in your browser, then try again.",
+      "service-not-allowed": "Microphone blocked by the browser/OS. Check your privacy settings.",
+      "no-speech": "Didn't catch anything — tap the mic and speak.",
+      "audio-capture": "No microphone found.",
+      "network": "Speech recognition needs a network connection.",
+    }[e.error] || `Mic error: ${e.error}`;
+    toast(msg, true);
+  };
   r.onend = () => { voice.listening = false; $("mic-btn").classList.remove("listening"); };
   return r;
 }
 
 $("mic-btn").onclick = () => {
   if (!voice.recognizer) voice.recognizer = initRecognizer();
-  if (!voice.recognizer) return;
-  if (voice.listening) voice.recognizer.stop();
-  else { stopSpeaking(); voice.recognizer.start(); }
+  if (!voice.recognizer) { toast("Voice answers need Chrome or Edge — this browser doesn't support them.", true); return; }
+  if (voice.listening) { voice.recognizer.stop(); return; }
+  stopSpeaking();
+  // start() throws synchronously if recognition is already live or the mic is
+  // blocked; without this the button just did nothing. Surface it instead.
+  try {
+    voice.recognizer.start();
+  } catch (err) {
+    if (err.name === "InvalidStateError") { try { voice.recognizer.stop(); } catch {} return; }
+    toast(`Couldn't start the mic — ${err.message}`, true);
+  }
 };
 
 // Reveal voice controls that this browser actually supports, once a session starts.
