@@ -378,14 +378,6 @@ details[open] > summary .disclosure svg { transform: rotate(90deg); }
   background: color-mix(in oklch, var(--primary) 12%, transparent);
 }
 #voice-toggle[aria-pressed="false"] .wave { display: none; }
-.voice-picker {
-  max-width: 11rem; padding: .3rem .5rem; border-radius: 999px; font-size: 12px;
-  border: 1px solid var(--border); color: var(--muted-fg);
-  background: color-mix(in oklch, var(--card) 60%, transparent);
-  outline: none; cursor: pointer;
-}
-.voice-picker:hover { color: var(--foreground); }
-.voice-picker:focus { border-color: var(--primary); }
 .mic-btn {
   width: 2.25rem; height: 2.25rem; flex-shrink: 0; border-radius: .5rem;
   display: flex; align-items: center; justify-content: center;
@@ -654,7 +646,6 @@ details[open] > summary .disclosure svg { transform: rotate(90deg); }
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5 6 9H2v6h4l5 4V5z"/><path class="wave" d="M15.5 8.5a5 5 0 0 1 0 7M19 5a9 9 0 0 1 0 14"/></svg>
               <span id="voice-label">Voice off</span>
             </button>
-            <select id="voice-picker" class="voice-picker hidden" aria-label="Choose interviewer voice"></select>
           </div>
           <span class="mono" id="word-count"></span>
         </div>
@@ -734,13 +725,12 @@ const voice = {
   supportedTTS: "speechSynthesis" in window,
   SR: window.SpeechRecognition || window.webkitSpeechRecognition,
   enabled: localStorage.getItem("callback-ai-voice") === "on",
-  chosenURI: localStorage.getItem("callback-ai-voice-uri") || "",
   voices: [],
   recognizer: null,
   listening: false,
 };
 
-function loadVoices() { voice.voices = speechSynthesis.getVoices() || []; populateVoicePicker(); }
+function loadVoices() { voice.voices = speechSynthesis.getVoices() || []; }
 if (voice.supportedTTS) { loadVoices(); speechSynthesis.onvoiceschanged = loadVoices; }
 
 // Rank the available browser voices and pick the best match for the
@@ -767,42 +757,66 @@ function pickVoice(hint) {
   const en = voice.voices.filter((v) => v.lang && v.lang.toLowerCase().startsWith("en"));
   const pool = en.length ? en : voice.voices;
   if (!pool.length) return null;
-  if (voice.chosenURI) { const c = pool.find((v) => v.voiceURI === voice.chosenURI); if (c) return c; }
   const genderRe = hint === "female" ? FEMALE_RE : hint === "male" ? MALE_RE : null;
   return pool.slice().sort((a, b) => scoreVoice(b, genderRe) - scoreVoice(a, genderRe))[0];
 }
 
-// Populate the "voice" dropdown with the browser's best English voices so the
-// user can override the auto-pick. Best (natural) ones float to the top.
-function populateVoicePicker() {
-  const sel = $("voice-picker");
-  if (!sel || !voice.supportedTTS) return;
-  const en = voice.voices.filter((v) => v.lang && v.lang.toLowerCase().startsWith("en"));
-  const pool = (en.length ? en : voice.voices).slice()
-    .sort((a, b) => scoreVoice(b, null) - scoreVoice(a, null));
-  if (!pool.length) { sel.classList.add("hidden"); return; }
-  sel.classList.remove("hidden");
-  sel.innerHTML = '<option value="">Auto voice (per interviewer)</option>' +
-    pool.map((v) => {
-      const nice = NATURAL_RE.test(v.name) || v.localService === false ? " ✨" : "";
-      return `<option value="${v.voiceURI}">${v.name.replace(/\s*\(.*?\)/g, "")}${nice}</option>`;
-    }).join("");
-  sel.value = voice.chosenURI || "";
-}
+// Speaking is queued so the opening line and first question play in order
+// (each waits for the previous to finish). Primary path is the server's
+// natural neural voice; if that fails (offline / network blocked) we fall
+// back to the browser's robotic-but-free Web Speech voice.
+let currentAudio = null;
+const speakQueue = [];
+let draining = false;
 
 function speakQuestion(text) {
-  if (!voice.enabled || !voice.supportedTTS || !state.interviewer) return;
-  // No cancel here: the opening line and first question fire back to back and
-  // should both play. speechSynthesis queues them; we cancel on the user's turn.
-  const u = new SpeechSynthesisUtterance(text);
-  const who = state.interviewer;
-  u.pitch = who.voice_pitch ?? 1;
-  u.rate = who.voice_rate ?? 1;
-  const v = pickVoice(who.voice_hint);
-  if (v) u.voice = v;
-  u.onstart = () => showSpeaking(true);
-  u.onend = () => showSpeaking(false);
-  speechSynthesis.speak(u);
+  if (!voice.enabled || !state.interviewer) return;
+  speakQueue.push(text);
+  if (!draining) drainSpeak();
+}
+
+async function drainSpeak() {
+  draining = true;
+  while (speakQueue.length && voice.enabled) await speakOne(speakQueue.shift());
+  draining = false;
+}
+
+function speakOne(text) {
+  return new Promise((resolve) => {
+    const who = state.interviewer;
+    fetch(`${API}/tts`, {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ text, voice: who.neural_voice, rate: who.voice_rate }),
+    })
+      .then((resp) => { if (!resp.ok) throw new Error("tts"); return resp.blob(); })
+      .then((blob) => {
+        const url = URL.createObjectURL(blob);
+        const audio = new Audio(url);
+        currentAudio = audio;
+        const done = () => { URL.revokeObjectURL(url); if (currentAudio === audio) currentAudio = null; showSpeaking(false); resolve(); };
+        audio.onplay = () => showSpeaking(true);
+        audio.onended = done;
+        audio.onerror = done;
+        return audio.play();
+      })
+      .catch(() => {                       // fall back to browser Web Speech
+        if (!voice.supportedTTS) { resolve(); return; }
+        const u = new SpeechSynthesisUtterance(text);
+        u.pitch = who.voice_pitch ?? 1; u.rate = who.voice_rate ?? 1;
+        const v = pickVoice(who.voice_hint); if (v) u.voice = v;
+        u.onstart = () => showSpeaking(true);
+        u.onend = () => { showSpeaking(false); resolve(); };
+        u.onerror = () => { showSpeaking(false); resolve(); };
+        speechSynthesis.speak(u);
+      });
+  });
+}
+
+function stopSpeaking() {
+  speakQueue.length = 0;
+  if (currentAudio) { currentAudio.pause(); currentAudio = null; }
+  if (voice.supportedTTS) speechSynthesis.cancel();
+  showSpeaking(false);
 }
 
 function showSpeaking(on) {
@@ -830,16 +844,10 @@ function setVoiceEnabled(on) {
   const btn = $("voice-toggle");
   btn.setAttribute("aria-pressed", String(on));
   $("voice-label").textContent = on ? "Voice on" : "Voice off";
-  if (!on && voice.supportedTTS) speechSynthesis.cancel();
+  if (!on) stopSpeaking();
 }
 
 $("voice-toggle").onclick = () => setVoiceEnabled(!voice.enabled);
-$("voice-picker").onchange = (e) => {
-  voice.chosenURI = e.target.value;
-  localStorage.setItem("callback-ai-voice-uri", voice.chosenURI);
-  if (voice.supportedTTS) speechSynthesis.cancel();
-  if (voice.enabled && state.interviewer) speakQuestion("Okay — this is how I'll sound.");
-};
 
 // ---- speech-to-text (answer by voice) ----
 function initRecognizer() {
@@ -865,7 +873,7 @@ $("mic-btn").onclick = () => {
   if (!voice.recognizer) voice.recognizer = initRecognizer();
   if (!voice.recognizer) return;
   if (voice.listening) voice.recognizer.stop();
-  else { if (voice.supportedTTS) speechSynthesis.cancel(); voice.recognizer.start(); }
+  else { stopSpeaking(); voice.recognizer.start(); }
 };
 
 // Reveal voice controls that this browser actually supports, once a session starts.
@@ -1131,7 +1139,7 @@ els.answerForm.addEventListener("submit", async (e) => {
   const answer = els.answerInput.value.trim();
   if (!answer || !state.sessionId) return;
 
-  if (voice.supportedTTS) speechSynthesis.cancel();  // stop reading once you answer
+  stopSpeaking();  // stop reading once you answer
   if (voice.listening) voice.recognizer.stop();
 
   // Text stays in the box until the request succeeds — a failure used to eat it.
@@ -1154,7 +1162,7 @@ els.answerForm.addEventListener("submit", async (e) => {
 
     if (data.done) {
       els.composer.classList.add("hidden");
-      if (voice.supportedTTS) speechSynthesis.cancel();
+      stopSpeaking();
       await loadReport();
     } else {
       state.turn = data.turn + 1;
