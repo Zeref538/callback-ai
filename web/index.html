@@ -273,35 +273,43 @@ details > summary::-webkit-details-marker { display: none; }
 .disclosure svg { transition: transform .2s; }
 details[open] > summary .disclosure svg { transform: rotate(90deg); }
 
-.persona-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: .5rem; }
+.persona-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: .6rem; }
 @media (max-width: 520px) { .persona-grid { grid-template-columns: 1fr; } }
 .persona {
-  position: relative; padding: .75rem .7rem; border-radius: .625rem; text-align: left;
-  border: 1px solid var(--border); background: var(--secondary);
-  transition: border-color .15s, background .15s, transform .1s;
+  position: relative; display: flex; flex-direction: column; min-height: 100%;
+  padding: .9rem .8rem; border-radius: .85rem; text-align: left; overflow: hidden;
+  border: 1px solid var(--border); background: color-mix(in oklch, var(--card) 60%, transparent);
+  transition: border-color .18s, background .18s, transform .12s, box-shadow .18s;
 }
-.persona:hover { border-color: color-mix(in oklch, var(--who, var(--primary)) 55%, transparent); transform: translateY(-1px); }
+/* a faint wash of the persona's own colour, top-left, so each card reads as a person */
+.persona::before {
+  content: ""; position: absolute; inset: 0; pointer-events: none; opacity: .5;
+  background: radial-gradient(120% 90% at 0% 0%, color-mix(in oklch, var(--who, var(--primary)) 12%, transparent), transparent 60%);
+}
+.persona > * { position: relative; }
+.persona:hover { border-color: color-mix(in oklch, var(--who, var(--primary)) 55%, transparent); transform: translateY(-2px); }
 .persona[aria-pressed="true"] {
   border-color: var(--who, var(--primary));
-  background: color-mix(in oklch, var(--who, var(--primary)) 12%, transparent);
+  background: color-mix(in oklch, var(--who, var(--primary)) 14%, transparent);
+  box-shadow: 0 8px 26px -12px color-mix(in oklch, var(--who, var(--primary)) 80%, transparent);
 }
 .persona[aria-pressed="true"]::after {
-  content: ""; position: absolute; top: .6rem; right: .6rem; width: 7px; height: 7px;
+  content: ""; position: absolute; top: .7rem; right: .7rem; width: 8px; height: 8px; z-index: 1;
   border-radius: 50%; background: var(--who, var(--primary));
-  box-shadow: 0 0 0 3px color-mix(in oklch, var(--who, var(--primary)) 25%, transparent);
+  box-shadow: 0 0 0 4px color-mix(in oklch, var(--who, var(--primary)) 22%, transparent);
 }
-.persona-top { display: flex; align-items: center; gap: .5rem; margin-bottom: .4rem; }
+.persona-top { display: flex; align-items: center; gap: .55rem; margin-bottom: .5rem; }
 .avatar {
-  width: 1.75rem; height: 1.75rem; border-radius: 50%; flex-shrink: 0;
+  width: 2rem; height: 2rem; border-radius: 50%; flex-shrink: 0;
   display: flex; align-items: center; justify-content: center;
-  font-size: 12px; font-weight: 700; letter-spacing: -.01em;
-  background: color-mix(in oklch, var(--who, var(--primary)) 22%, transparent);
-  color: var(--who, var(--primary));
-  border: 1px solid color-mix(in oklch, var(--who, var(--primary)) 45%, transparent);
+  font-size: 13px; font-weight: 700; letter-spacing: -.01em;
+  color: var(--primary-fg);
+  background: linear-gradient(140deg, var(--who, var(--primary)), color-mix(in oklch, var(--who, var(--primary)) 55%, var(--foreground)));
+  box-shadow: 0 2px 8px -2px color-mix(in oklch, var(--who, var(--primary)) 70%, transparent);
 }
-.persona-name { font-size: 13px; font-weight: 600; line-height: 1.15; }
-.persona-role { font-size: 10px; text-transform: uppercase; letter-spacing: .05em; color: var(--muted-fg); }
-.persona-blurb { font-size: 11px; line-height: 1.4; color: var(--muted-fg); }
+.persona-name { font-size: 13.5px; font-weight: 600; line-height: 1.15; }
+.persona-role { font-size: 9.5px; text-transform: uppercase; letter-spacing: .06em; color: color-mix(in oklch, var(--who, var(--primary)) 75%, var(--muted-fg)); font-weight: 600; }
+.persona-blurb { font-size: 11.5px; line-height: 1.45; color: var(--muted-fg); margin-top: auto; }
 
 /* ---------- chat ---------- */
 .transcript { flex: 1; padding-bottom: 1rem; }
