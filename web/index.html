@@ -354,6 +354,22 @@ details[open] > summary .disclosure svg { transform: rotate(90deg); }
 .send-btn:disabled { opacity: .4; cursor: not-allowed; }
 .composer-meta { display: flex; align-items: center; justify-content: space-between; padding: .35rem .25rem 0; font-size: 11px; color: var(--muted-fg); }
 .composer-meta button:hover { color: var(--foreground); }
+.mic-btn {
+  width: 2.25rem; height: 2.25rem; flex-shrink: 0; border-radius: .5rem;
+  display: flex; align-items: center; justify-content: center;
+  border: 1px solid var(--border); color: var(--muted-fg);
+  transition: background .15s, color .15s, border-color .15s;
+}
+.mic-btn:hover { color: var(--foreground); border-color: color-mix(in oklch, var(--foreground) 25%, transparent); }
+.mic-btn.listening { color: var(--danger); border-color: var(--danger); background: color-mix(in oklch, var(--danger) 12%, transparent); animation: micpulse 1.2s ease-in-out infinite; }
+@keyframes micpulse { 0%,100% { box-shadow: 0 0 0 0 color-mix(in oklch, var(--danger) 40%, transparent); } 50% { box-shadow: 0 0 0 5px transparent; } }
+@media (prefers-reduced-motion: reduce) { .mic-btn.listening { animation: none; } }
+#voice-toggle[aria-pressed="true"] { color: var(--primary); }
+.speaking-badge { display: inline-flex; align-items: center; gap: .35rem; font-size: 11px; color: var(--primary); margin-left: .5rem; }
+.speaking-badge .bar { width: 2px; height: 9px; background: currentColor; border-radius: 1px; animation: eq .9s ease-in-out infinite; }
+.speaking-badge .bar:nth-child(2) { animation-delay: .15s; } .speaking-badge .bar:nth-child(3) { animation-delay: .3s; }
+@keyframes eq { 0%,100% { height: 4px; } 50% { height: 11px; } }
+@media (prefers-reduced-motion: reduce) { .speaking-badge .bar { animation: none; } }
 
 /* ---------- report ---------- */
 .report-hero { display: flex; flex-direction: column; align-items: center; gap: 1.25rem; }
@@ -393,6 +409,9 @@ details[open] > summary .disclosure svg { transform: rotate(90deg); }
   max-width: min(90vw, 30rem);
 }
 
+.spin { display: inline-block; width: 11px; height: 11px; border: 2px solid color-mix(in oklch, currentColor 30%, transparent); border-top-color: currentColor; border-radius: 50%; animation: spin .7s linear infinite; vertical-align: -1px; }
+@keyframes spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .spin { animation-duration: 1.4s; } }
 .fade-up { animation: fadeUp .3s cubic-bezier(.16,1,.3,1); }
 @keyframes fadeUp { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
 @media (prefers-reduced-motion: reduce) {
@@ -492,12 +511,19 @@ details[open] > summary .disclosure svg { transform: rotate(90deg); }
           <div class="field">
             <div class="field-head">
               <label for="job-post">Job post</label>
-              <button type="button" class="link-btn" id="fill-sample">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
-                Use a sample
-              </button>
+              <div style="display:flex;gap:.75rem;align-items:center">
+                <button type="button" class="link-btn" id="upload-job">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>
+                  Upload file
+                </button>
+                <button type="button" class="link-btn" id="fill-sample">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+                  Use a sample
+                </button>
+              </div>
             </div>
-            <textarea id="job-post" rows="4" required placeholder="Paste the job posting text"></textarea>
+            <textarea id="job-post" rows="4" required placeholder="Paste the job posting text, or upload a PDF / Word file"></textarea>
+            <input type="file" id="job-file" accept=".pdf,.docx,.txt,.md" class="hidden">
           </div>
 
           <details class="field">
@@ -507,8 +533,15 @@ details[open] > summary .disclosure svg { transform: rotate(90deg); }
             </span></summary>
             <div style="margin-top:.75rem">
               <div class="field">
-                <label for="resume" style="display:block;margin-bottom:.4rem">Resume</label>
-                <textarea id="resume" rows="3" placeholder="Paste resume text"></textarea>
+                <div class="field-head">
+                  <label for="resume">Resume</label>
+                  <button type="button" class="link-btn" id="upload-resume">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>
+                    Upload file
+                  </button>
+                </div>
+                <textarea id="resume" rows="3" placeholder="Paste resume text, or upload a PDF / Word file"></textarea>
+                <input type="file" id="resume-file" accept=".pdf,.docx,.txt,.md" class="hidden">
               </div>
               <div style="margin-bottom:0">
                 <label for="portfolio-link" style="display:block;margin-bottom:.4rem">Portfolio link</label>
@@ -523,22 +556,22 @@ details[open] > summary .disclosure svg { transform: rotate(90deg); }
             <div class="persona-grid" role="group" aria-label="Choose your interviewer">
               <button type="button" class="persona" data-persona="friendly" aria-pressed="false" style="--who:var(--info)">
                 <span class="persona-top">
-                  <span class="avatar">M</span>
-                  <span><span class="persona-name">Mira</span><br><span class="persona-role">Eng Manager</span></span>
+                  <span class="avatar">N</span>
+                  <span><span class="persona-name">Nova</span><br><span class="persona-role">Friendly · Eng Manager</span></span>
                 </span>
                 <span class="persona-blurb">Warm and patient. Gives you room to think.</span>
               </button>
               <button type="button" class="persona" data-persona="neutral" aria-pressed="true" style="--who:var(--primary)">
                 <span class="persona-top">
-                  <span class="avatar">S</span>
-                  <span><span class="persona-name">Sam</span><br><span class="persona-role">Senior Eng</span></span>
+                  <span class="avatar">E</span>
+                  <span><span class="persona-name">Ellis</span><br><span class="persona-role">Neutral · Senior Eng</span></span>
                 </span>
                 <span class="persona-blurb">Plain and professional. No flattery.</span>
               </button>
               <button type="button" class="persona" data-persona="adversarial" aria-pressed="false" style="--who:var(--warning)">
                 <span class="persona-top">
-                  <span class="avatar">R</span>
-                  <span><span class="persona-name">Rook</span><br><span class="persona-role">Principal Eng</span></span>
+                  <span class="avatar">K</span>
+                  <span><span class="persona-name">Kade</span><br><span class="persona-role">Strict · Principal Eng</span></span>
                 </span>
                 <span class="persona-blurb">Skeptical. Wants numbers, notices when you lack them.</span>
               </button>
@@ -560,13 +593,19 @@ details[open] > summary .disclosure svg { transform: rotate(90deg); }
       <div class="composer-inner">
         <form class="composer" id="answer-form">
           <label for="answer-input" class="sr-only">Your answer</label>
+          <button type="button" class="mic-btn hidden" id="mic-btn" aria-label="Answer by voice">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2M12 19v3"/></svg>
+          </button>
           <textarea id="answer-input" rows="1" placeholder="Answer the question… (Enter to send · Shift+Enter for newline)"></textarea>
           <button type="submit" class="send-btn" id="send-btn" aria-label="Send answer">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2 11 13"/><path d="M22 2 15 22l-4-9-9-4 20-7Z"/></svg>
           </button>
         </form>
         <div class="composer-meta">
-          <button type="button" id="skip-btn">Not sure — skip this one</button>
+          <div style="display:flex;gap:1rem;align-items:center">
+            <button type="button" id="skip-btn">Not sure — skip this one</button>
+            <button type="button" id="voice-toggle" class="hidden" aria-pressed="false">🔊 Interviewer voice: off</button>
+          </div>
           <span class="mono" id="word-count"></span>
         </div>
       </div>
@@ -636,6 +675,107 @@ function toast(msg, isError) {
   toastTimer = setTimeout(() => t.classList.add("hidden"), 5000);
 }
 
+// ================= VOICE (Web Speech API, no key needed) =================
+// Text-to-speech reads each question in the interviewer's voice; speech
+// recognition lets you answer out loud. Both are browser-native and free.
+// Recognition is Chrome/Edge only, so the mic button hides where unsupported;
+// chat always works regardless.
+const voice = {
+  supportedTTS: "speechSynthesis" in window,
+  SR: window.SpeechRecognition || window.webkitSpeechRecognition,
+  enabled: localStorage.getItem("callback-ai-voice") === "on",
+  voices: [],
+  recognizer: null,
+  listening: false,
+};
+
+function loadVoices() { voice.voices = speechSynthesis.getVoices() || []; }
+if (voice.supportedTTS) { loadVoices(); speechSynthesis.onvoiceschanged = loadVoices; }
+
+// Pick a browser voice matching the interviewer's gender hint; pitch/rate do
+// the heavy lifting since the available voice set differs per browser/OS.
+function pickVoice(hint) {
+  const en = voice.voices.filter((v) => v.lang && v.lang.startsWith("en"));
+  const pool = en.length ? en : voice.voices;
+  const femaleRe = /female|zira|samantha|victoria|susan|aria|jenny|nova|karen|serena|fiona|moira/i;
+  const maleRe = /male|david|mark|daniel|alex|george|guy|fred|rishi|arthur/i;
+  const want = hint === "female" ? femaleRe : hint === "male" ? maleRe : null;
+  if (want) { const m = pool.find((v) => want.test(v.name)); if (m) return m; }
+  return pool[0] || null;
+}
+
+function speakQuestion(text) {
+  if (!voice.enabled || !voice.supportedTTS || !state.interviewer) return;
+  // No cancel here: the opening line and first question fire back to back and
+  // should both play. speechSynthesis queues them; we cancel on the user's turn.
+  const u = new SpeechSynthesisUtterance(text);
+  const who = state.interviewer;
+  u.pitch = who.voice_pitch ?? 1;
+  u.rate = who.voice_rate ?? 1;
+  const v = pickVoice(who.voice_hint);
+  if (v) u.voice = v;
+  u.onstart = () => showSpeaking(true);
+  u.onend = () => showSpeaking(false);
+  speechSynthesis.speak(u);
+}
+
+function showSpeaking(on) {
+  document.querySelectorAll(".speaking-badge").forEach((b) => b.remove());
+  if (!on) return;
+  const last = els.transcript.querySelector(".msg-role:last-of-type") ||
+    [...els.transcript.querySelectorAll(".msg-role")].pop();
+  if (last) {
+    const badge = document.createElement("span");
+    badge.className = "speaking-badge";
+    badge.innerHTML = '<span class="bar"></span><span class="bar"></span><span class="bar"></span>speaking';
+    last.after(badge);
+  }
+}
+
+function setVoiceEnabled(on) {
+  voice.enabled = on;
+  localStorage.setItem("callback-ai-voice", on ? "on" : "off");
+  const btn = $("voice-toggle");
+  btn.setAttribute("aria-pressed", String(on));
+  btn.textContent = on ? "🔊 Interviewer voice: on" : "🔇 Interviewer voice: off";
+  if (!on && voice.supportedTTS) speechSynthesis.cancel();
+}
+
+$("voice-toggle").onclick = () => setVoiceEnabled(!voice.enabled);
+
+// ---- speech-to-text (answer by voice) ----
+function initRecognizer() {
+  if (!voice.SR) return null;
+  const r = new voice.SR();
+  r.lang = "en-US";
+  r.interimResults = true;
+  r.continuous = false;
+  let base = "";
+  r.onstart = () => { voice.listening = true; $("mic-btn").classList.add("listening"); base = els.answerInput.value; };
+  r.onresult = (e) => {
+    let interim = "";
+    for (let i = e.resultIndex; i < e.results.length; i++) interim += e.results[i][0].transcript;
+    els.answerInput.value = (base ? base + " " : "") + interim;
+    els.answerInput.dispatchEvent(new Event("input"));
+  };
+  r.onerror = (e) => { if (e.error !== "aborted") toast(`Mic: ${e.error}`, true); };
+  r.onend = () => { voice.listening = false; $("mic-btn").classList.remove("listening"); };
+  return r;
+}
+
+$("mic-btn").onclick = () => {
+  if (!voice.recognizer) voice.recognizer = initRecognizer();
+  if (!voice.recognizer) return;
+  if (voice.listening) voice.recognizer.stop();
+  else { if (voice.supportedTTS) speechSynthesis.cancel(); voice.recognizer.start(); }
+};
+
+// Reveal voice controls that this browser actually supports, once a session starts.
+function enableVoiceControls() {
+  if (voice.supportedTTS) { $("voice-toggle").classList.remove("hidden"); setVoiceEnabled(voice.enabled); }
+  if (voice.SR) $("mic-btn").classList.remove("hidden");
+}
+
 // ---------- persona ----------
 document.querySelectorAll(".persona").forEach((card) => {
   card.onclick = () => {
@@ -644,6 +784,37 @@ document.querySelectorAll(".persona").forEach((card) => {
     state.persona = card.dataset.persona;
   };
 });
+
+// ---------- file upload (PDF / DOCX / TXT -> textarea) ----------
+function wireUpload(triggerId, inputId, targetId, label) {
+  const input = $(inputId), trigger = $(triggerId), target = $(targetId);
+  trigger.onclick = () => input.click();
+  input.onchange = async () => {
+    const file = input.files[0];
+    if (!file) return;
+    trigger.disabled = true;
+    const original = trigger.innerHTML;
+    trigger.innerHTML = '<span class="spin"></span> Reading…';
+    try {
+      const fd = new FormData();
+      fd.append("file", file);
+      const resp = await fetch(`${API}/extract`, { method: "POST", body: fd });
+      const data = await resp.json();
+      if (!resp.ok) throw new Error(data.detail || "Couldn't read that file.");
+      target.value = data.text;
+      target.dispatchEvent(new Event("input"));
+      toast(`${label} loaded from ${file.name} (${data.chars.toLocaleString()} chars).`);
+    } catch (err) {
+      toast(err.message, true);
+    } finally {
+      trigger.disabled = false;
+      trigger.innerHTML = original;
+      input.value = "";
+    }
+  };
+}
+wireUpload("upload-job", "job-file", "job-post", "Job post");
+wireUpload("upload-resume", "resume-file", "resume", "Resume");
 
 // ---------- sample ----------
 const SAMPLE = {
@@ -754,6 +925,7 @@ function bubbleQuestion(text, opts) {
   div.querySelector(".msg-q").textContent = text;
   els.transcript.appendChild(div);
   div.scrollIntoView({ behavior: "smooth", block: "end" });
+  speakQuestion(text);  // read it aloud if interviewer voice is on
   return div;
 }
 function bubbleAnswer(text) {
@@ -838,6 +1010,7 @@ $("setup-form").addEventListener("submit", async (e) => {
     els.chat.style.display = "flex";
     els.composer.classList.remove("hidden");
     els.transcript.innerHTML = "";
+    enableVoiceControls();
 
     if (data.conflicts) {
       const n = document.createElement("div");
@@ -870,6 +1043,9 @@ els.answerForm.addEventListener("submit", async (e) => {
   const answer = els.answerInput.value.trim();
   if (!answer || !state.sessionId) return;
 
+  if (voice.supportedTTS) speechSynthesis.cancel();  // stop reading once you answer
+  if (voice.listening) voice.recognizer.stop();
+
   // Text stays in the box until the request succeeds — a failure used to eat it.
   const pending = bubbleAnswer(answer);
   els.sendBtn.disabled = true;
@@ -890,6 +1066,7 @@ els.answerForm.addEventListener("submit", async (e) => {
 
     if (data.done) {
       els.composer.classList.add("hidden");
+      if (voice.supportedTTS) speechSynthesis.cancel();
       await loadReport();
     } else {
       state.turn = data.turn + 1;

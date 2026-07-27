@@ -4,7 +4,9 @@ ponytail: sessions live in a process-local dict, not a database -- fine for a
 single-user portfolio demo; swap for real storage if this ever needs multiple
 concurrent users or to survive a server restart.
 """
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, File, HTTPException, UploadFile
+
+from callback_ai.ingest.document import UnsupportedDocument, extract_text
 
 from callback_ai.api.schemas import (
     AnswerRequest,
@@ -28,6 +30,22 @@ from callback_ai.memory.session_store import SessionLogger
 router = APIRouter()
 
 SESSIONS: dict[str, InterviewSession] = {}
+
+MAX_UPLOAD_BYTES = 5 * 1024 * 1024  # 5 MB -- a resume or job post, not a book
+
+
+@router.post("/extract")
+async def extract_document(file: UploadFile = File(...)) -> dict:
+    """Turn an uploaded resume / job-post file (PDF, DOCX, TXT, MD) into text
+    the setup form can drop straight into a textarea."""
+    data = await file.read()
+    if len(data) > MAX_UPLOAD_BYTES:
+        raise HTTPException(status_code=413, detail="File is larger than 5 MB.")
+    try:
+        text = extract_text(file.filename or "", data)
+    except UnsupportedDocument as e:
+        raise HTTPException(status_code=422, detail=str(e))
+    return {"text": text, "chars": len(text)}
 
 
 @router.post("/sessions", response_model=StartSessionResponse)
@@ -61,7 +79,8 @@ def start_session(req: StartSessionRequest) -> StartSessionResponse:
         conflicts=len(inventory.conflicts),
         interviewer=InterviewerInfo(
             key=persona.key, name=persona.name, role=persona.role,
-            opening=persona.opening, accent=persona.accent,
+            opening=persona.opening, accent=persona.accent, style=persona.style,
+            voice_pitch=persona.voice_pitch, voice_rate=persona.voice_rate, voice_hint=persona.voice_hint,
         ),
     )
 

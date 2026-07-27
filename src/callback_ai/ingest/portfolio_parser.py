@@ -1,4 +1,11 @@
-"""Fetch a portfolio URL and extract project/skill claims (best-effort, no JS rendering)."""
+"""Fetch a portfolio URL and extract project/skill claims (best-effort, no JS rendering).
+
+The scraper drops boilerplate (script/style plus nav/header/footer/aside
+chrome) so the model sees the actual portfolio content, and keeps the page
+title and meta description since those often carry the headline pitch. Still
+best-effort: JS-rendered single-page apps have no server-side text to read,
+and those fail gracefully so a session continues on resume + role.
+"""
 from callback_ai.llm.json_parse import parse_json_response
 from html.parser import HTMLParser
 
@@ -14,23 +21,43 @@ class PortfolioFetchError(Exception):
     """Raised when the page can't be fetched or has no usable text (e.g. SPA)."""
 
 
+# Tags whose text is site chrome, not portfolio content.
+_SKIP_TEXT = {"script", "style", "nav", "header", "footer", "aside", "noscript", "svg"}
+
+
 class _TextExtractor(HTMLParser):
     def __init__(self):
         super().__init__()
-        self._skip = False
+        self._skip_depth = 0
+        self._in_title = False
+        self.title = ""
+        self.meta_description = ""
         self.chunks: list[str] = []
 
     def handle_starttag(self, tag, attrs):
-        if tag in ("script", "style"):
-            self._skip = True
+        if tag in _SKIP_TEXT:
+            self._skip_depth += 1
+        elif tag == "title":
+            self._in_title = True
+        elif tag == "meta":
+            a = dict(attrs)
+            if a.get("name", "").lower() == "description" and a.get("content"):
+                self.meta_description = a["content"].strip()
 
     def handle_endtag(self, tag):
-        if tag in ("script", "style"):
-            self._skip = False
+        if tag in _SKIP_TEXT and self._skip_depth:
+            self._skip_depth -= 1
+        elif tag == "title":
+            self._in_title = False
 
     def handle_data(self, data):
-        if not self._skip and data.strip():
-            self.chunks.append(data.strip())
+        text = data.strip()
+        if not text:
+            return
+        if self._in_title:
+            self.title = text
+        elif self._skip_depth == 0 and len(text) > 1:
+            self.chunks.append(text)
 
 
 def fetch_portfolio_text(url: str) -> str:
@@ -42,8 +69,12 @@ def fetch_portfolio_text(url: str) -> str:
 
     extractor = _TextExtractor()
     extractor.feed(resp.text)
-    text = "\n".join(extractor.chunks)
-    if len(text) < 40:
+
+    header = "\n".join(p for p in (extractor.title, extractor.meta_description) if p)
+    body = "\n".join(extractor.chunks)
+    text = f"{header}\n\n{body}".strip()
+
+    if len(body) < 40:
         raise PortfolioFetchError(f"page at {url} had no usable text (likely JS-rendered)")
     return text
 

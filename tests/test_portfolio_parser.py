@@ -53,6 +53,25 @@ def test_parse_portfolio_link_fails_gracefully_on_fetch_error(monkeypatch):
     assert claims == []
 
 
+def test_fetch_strips_nav_footer_and_keeps_title_and_meta(monkeypatch):
+    html = """<html><head><title>Jane's Portfolio</title>
+    <meta name="description" content="Backend engineer, payments systems.">
+    </head><body>
+    <nav>Home About Contact Blog Login</nav>
+    <header>Menu</header>
+    <main><p>Built a Redis-backed idempotent retry service for payment webhooks.</p></main>
+    <footer>Copyright 2026 all rights reserved cookie policy</footer>
+    </body></html>"""
+    monkeypatch.setattr(httpx, "get", _mock_get(html))
+    text = portfolio_parser.fetch_portfolio_text("https://example.com/p")
+
+    assert "Jane's Portfolio" in text
+    assert "Backend engineer, payments systems." in text
+    assert "idempotent retry service" in text
+    assert "Login" not in text          # nav stripped
+    assert "cookie policy" not in text   # footer stripped
+
+
 def test_parse_portfolio_link_fails_gracefully_on_spa_page(monkeypatch):
     monkeypatch.setattr(httpx, "get", _mock_get("<html><body><div id='root'></div></body></html>"))
     chat = FakeChat([])

@@ -17,6 +17,10 @@ class InterviewerInfo(BaseModel):
     role: str
     opening: str
     accent: str
+    style: str
+    voice_pitch: float
+    voice_rate: float
+    voice_hint: str
 
 
 class StartSessionResponse(BaseModel):
