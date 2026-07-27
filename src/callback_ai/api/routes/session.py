@@ -4,7 +4,11 @@ ponytail: sessions live in a process-local dict, not a database -- fine for a
 single-user portfolio demo; swap for real storage if this ever needs multiple
 concurrent users or to survive a server restart.
 """
+import re
+
 from fastapi import APIRouter, File, HTTPException, UploadFile
+from fastapi.responses import StreamingResponse
+from pydantic import BaseModel
 
 from callback_ai.ingest.document import UnsupportedDocument, extract_text
 
@@ -48,6 +52,40 @@ async def extract_document(file: UploadFile = File(...)) -> dict:
     return {"text": text, "chars": len(text)}
 
 
+class TTSRequest(BaseModel):
+    text: str
+    voice: str = "en-US-AndrewNeural"
+    rate: float = 1.0   # 1.0 = normal; mapped to edge-tts's +/-N% form
+
+
+# Only allow real Microsoft neural voice ids, so this endpoint can't be pointed
+# at arbitrary strings. edge-tts hits a public Microsoft endpoint (free, no key).
+_VOICE_RE = re.compile(r"^[a-zA-Z]{2}-[a-zA-Z]+-[A-Za-z]+Neural$")
+
+
+@router.post("/tts")
+async def text_to_speech(req: TTSRequest) -> StreamingResponse:
+    """Natural neural speech for an interviewer's question. Free, no API key
+    (edge-tts / Microsoft public voices). Falls back to browser Web Speech on
+    the client if this fails."""
+    import edge_tts
+
+    text = req.text.strip()[:1200]  # a question, not an essay
+    if not text:
+        raise HTTPException(status_code=422, detail="empty text")
+    voice = req.voice if _VOICE_RE.match(req.voice) else "en-US-AndrewNeural"
+    pct = max(-40, min(40, round((req.rate - 1.0) * 100)))
+    rate = f"{'+' if pct >= 0 else ''}{pct}%"
+
+    async def stream():
+        communicate = edge_tts.Communicate(text, voice, rate=rate)
+        async for chunk in communicate.stream():
+            if chunk["type"] == "audio":
+                yield chunk["data"]
+
+    return StreamingResponse(stream(), media_type="audio/mpeg")
+
+
 @router.post("/sessions", response_model=StartSessionResponse)
 def start_session(req: StartSessionRequest) -> StartSessionResponse:
     chat = build_chat()
@@ -81,6 +119,7 @@ def start_session(req: StartSessionRequest) -> StartSessionResponse:
             key=persona.key, name=persona.name, role=persona.role,
             opening=persona.opening, accent=persona.accent, style=persona.style,
             voice_pitch=persona.voice_pitch, voice_rate=persona.voice_rate, voice_hint=persona.voice_hint,
+            neural_voice=persona.neural_voice,
         ),
     )
 

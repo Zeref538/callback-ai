@@ -24,7 +24,8 @@ class Persona:
     style: str          # short label: friendly / neutral / strict
     voice_pitch: float  # Web Speech synthesis pitch (0-2), part of the interviewer's identity
     voice_rate: float   # Web Speech synthesis rate (0.1-10)
-    voice_hint: str     # preferred voice gender/quality hint for the browser
+    voice_hint: str     # preferred voice gender/quality hint for the browser fallback
+    neural_voice: str   # Microsoft neural voice (edge-tts) used for the natural server-side TTS
 
     # Kept for backwards compatibility with earlier code that read .name as the key.
     @property
@@ -50,6 +51,7 @@ PERSONAS: dict[str, Persona] = {
         voice_pitch=1.15,
         voice_rate=0.98,
         voice_hint="female",
+        neural_voice="en-US-JennyNeural",   # warm, friendly
     ),
     "neutral": Persona(
         key="neutral",
@@ -68,6 +70,7 @@ PERSONAS: dict[str, Persona] = {
         voice_pitch=1.0,
         voice_rate=1.0,
         voice_hint="neutral",
+        neural_voice="en-US-AndrewNeural",  # natural, even, senior
     ),
     "adversarial": Persona(
         key="adversarial",
@@ -86,6 +89,7 @@ PERSONAS: dict[str, Persona] = {
         voice_pitch=0.82,
         voice_rate=1.06,
         voice_hint="male",
+        neural_voice="en-US-ChristopherNeural",  # deep, authoritative
     ),
 }
 

@@ -21,6 +21,7 @@ class InterviewerInfo(BaseModel):
     voice_pitch: float
     voice_rate: float
     voice_hint: str
+    neural_voice: str
 
 
 class StartSessionResponse(BaseModel):
