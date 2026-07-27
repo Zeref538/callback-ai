@@ -7,7 +7,7 @@
 <meta name="color-scheme" content="dark light">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
 /* ============================================================
    Plain CSS on purpose: this page is served as one static file,
@@ -72,6 +72,13 @@ button { cursor: pointer; background: none; border: none; }
 h1, h2, h3, p, ul, li { margin: 0; }
 ul { list-style: none; padding: 0; }
 .mono { font-family: 'JetBrains Mono', ui-monospace, monospace; }
+/* Space Grotesk on the display type: it has more personality than Inter for
+   headlines and reads as "designed", which suits an audition-themed product;
+   Inter stays for body copy where it's more legible. */
+.hero h1, .logo-text, .report-verdict, .persona-name, .who-name, h1, h2, h3 {
+  font-family: 'Space Grotesk', 'Inter', ui-sans-serif, sans-serif;
+}
+.hero h1 { letter-spacing: -.03em; }
 ::selection { background: color-mix(in oklch, var(--primary) 30%, transparent); }
 ::-webkit-scrollbar { width: 10px; height: 10px; }
 ::-webkit-scrollbar-thumb { background: color-mix(in oklch, var(--foreground) 14%, transparent); border-radius: 6px; border: 3px solid transparent; background-clip: content-box; }
@@ -692,16 +699,51 @@ const voice = {
 function loadVoices() { voice.voices = speechSynthesis.getVoices() || []; }
 if (voice.supportedTTS) { loadVoices(); speechSynthesis.onvoiceschanged = loadVoices; }
 
-// Pick a browser voice matching the interviewer's gender hint; pitch/rate do
-// the heavy lifting since the available voice set differs per browser/OS.
+// Rank the available browser voices and pick the best match for the
+// interviewer's gender hint. The default SAPI voices (David/Zira) sound
+// robotic; Edge/Chrome ship far more natural network voices ("...Online
+// (Natural)", Google, Apple's premium/Siri) — those are what makes this
+// sound like a person, so quality is weighted above the gender hint.
+// If the user has hand-picked a voice, that always wins.
+const NATURAL_RE = /natural|neural|online|premium|enhanced|siri|journey|google\s?(uk|us)?\s?english/i;
+const FEMALE_RE = /\bfemale\b|zira|samantha|victoria|susan|aria|jenny|nova|karen|serena|fiona|moira|libby|sonia|emma|ava|clara|hazel/i;
+const MALE_RE = /\bmale\b|david|mark|daniel|alex|george|guy|fred|rishi|arthur|ryan|brian|christopher|eric|liam|tony/i;
+
+function scoreVoice(v, genderRe) {
+  let s = 0;
+  if (NATURAL_RE.test(v.name)) s += 5;
+  if (v.localService === false) s += 3;              // network voices beat local SAPI
+  if (/google|microsoft|apple/i.test(v.name)) s += 1;
+  if (genderRe) s += genderRe.test(v.name) ? 3 : -1;  // nudge toward the hint, don't force it
+  if (/^en-US/i.test(v.lang)) s += 1;
+  return s;
+}
+
 function pickVoice(hint) {
-  const en = voice.voices.filter((v) => v.lang && v.lang.startsWith("en"));
+  const en = voice.voices.filter((v) => v.lang && v.lang.toLowerCase().startsWith("en"));
   const pool = en.length ? en : voice.voices;
-  const femaleRe = /female|zira|samantha|victoria|susan|aria|jenny|nova|karen|serena|fiona|moira/i;
-  const maleRe = /male|david|mark|daniel|alex|george|guy|fred|rishi|arthur/i;
-  const want = hint === "female" ? femaleRe : hint === "male" ? maleRe : null;
-  if (want) { const m = pool.find((v) => want.test(v.name)); if (m) return m; }
-  return pool[0] || null;
+  if (!pool.length) return null;
+  if (voice.chosenURI) { const c = pool.find((v) => v.voiceURI === voice.chosenURI); if (c) return c; }
+  const genderRe = hint === "female" ? FEMALE_RE : hint === "male" ? MALE_RE : null;
+  return pool.slice().sort((a, b) => scoreVoice(b, genderRe) - scoreVoice(a, genderRe))[0];
+}
+
+// Populate the "voice" dropdown with the browser's best English voices so the
+// user can override the auto-pick. Best (natural) ones float to the top.
+function populateVoicePicker() {
+  const sel = $("voice-picker");
+  if (!sel || !voice.supportedTTS) return;
+  const en = voice.voices.filter((v) => v.lang && v.lang.toLowerCase().startsWith("en"));
+  const pool = (en.length ? en : voice.voices).slice()
+    .sort((a, b) => scoreVoice(b, null) - scoreVoice(a, null));
+  if (!pool.length) { sel.classList.add("hidden"); return; }
+  sel.classList.remove("hidden");
+  sel.innerHTML = '<option value="">Auto voice (per interviewer)</option>' +
+    pool.map((v) => {
+      const nice = NATURAL_RE.test(v.name) || v.localService === false ? " ✨" : "";
+      return `<option value="${v.voiceURI}">${v.name.replace(/\s*\(.*?\)/g, "")}${nice}</option>`;
+    }).join("");
+  sel.value = voice.chosenURI || "";
 }
 
 function speakQuestion(text) {
