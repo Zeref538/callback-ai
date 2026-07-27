@@ -16,6 +16,7 @@ dev = ["pytest>=8.0"]
 
 [project.scripts]
 callback-ai = "callback_ai.cli.main:main"
+callback-ai-serve = "callback_ai.server:main"
 
 [build-system]
 requires = ["setuptools>=68"]

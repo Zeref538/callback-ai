@@ -57,6 +57,22 @@ CLI instead of the browser:
 Tests: `.venv/Scripts/python -m pytest` — 58 tests, all against fake providers,
 so no key is needed to verify the logic.
 
+## Deploy
+
+Any host that runs a Python web process works (Render, Railway, Fly, a VM).
+The `Procfile` runs `callback-ai-serve`, which binds `0.0.0.0` and honours
+`$PORT`.
+
+1. Build command: `pip install -e .`
+2. Start command: `callback-ai-serve` (or `python -m callback_ai.server`)
+3. Set env vars: `NIM_API_KEY` (and leave `CALLBACK_AI_PROVIDER=nim`), or set
+   `CALLBACK_AI_PROVIDER=mock` to deploy the keyless demo.
+4. Verify the live box at `/api/health`.
+
+Keep `WEB_CONCURRENCY=1` (the default): sessions live in the server process,
+so a second worker can't see a session the first one started. Raise it only
+after moving sessions to shared storage.
+
 ## Architecture
 
 `session_engine.py` runs an agent loop, not a fixed pipeline: each turn it
