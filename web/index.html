@@ -359,8 +359,30 @@ details[open] > summary .disclosure svg { transform: rotate(90deg); }
 }
 .send-btn:hover { opacity: .9; }
 .send-btn:disabled { opacity: .4; cursor: not-allowed; }
-.composer-meta { display: flex; align-items: center; justify-content: space-between; padding: .35rem .25rem 0; font-size: 11px; color: var(--muted-fg); }
-.composer-meta button:hover { color: var(--foreground); }
+.composer-meta { display: flex; align-items: center; justify-content: space-between; gap: .5rem; padding: .45rem .25rem 0; font-size: 11px; color: var(--muted-fg); }
+.meta-controls { display: flex; align-items: center; gap: .4rem; flex-wrap: wrap; }
+.pill {
+  display: inline-flex; align-items: center; gap: .35rem;
+  padding: .3rem .65rem; border-radius: 999px; font-size: 12px; font-weight: 500;
+  border: 1px solid var(--border); color: var(--muted-fg);
+  background: color-mix(in oklch, var(--card) 60%, transparent);
+  transition: color .15s, border-color .15s, background .15s;
+}
+.pill:hover { color: var(--foreground); border-color: color-mix(in oklch, var(--foreground) 22%, transparent); }
+.pill svg { opacity: .85; }
+#voice-toggle[aria-pressed="true"] {
+  color: var(--primary); border-color: color-mix(in oklch, var(--primary) 45%, transparent);
+  background: color-mix(in oklch, var(--primary) 12%, transparent);
+}
+#voice-toggle[aria-pressed="false"] .wave { display: none; }
+.voice-picker {
+  max-width: 11rem; padding: .3rem .5rem; border-radius: 999px; font-size: 12px;
+  border: 1px solid var(--border); color: var(--muted-fg);
+  background: color-mix(in oklch, var(--card) 60%, transparent);
+  outline: none; cursor: pointer;
+}
+.voice-picker:hover { color: var(--foreground); }
+.voice-picker:focus { border-color: var(--primary); }
 .mic-btn {
   width: 2.25rem; height: 2.25rem; flex-shrink: 0; border-radius: .5rem;
   display: flex; align-items: center; justify-content: center;
@@ -371,7 +393,6 @@ details[open] > summary .disclosure svg { transform: rotate(90deg); }
 .mic-btn.listening { color: var(--danger); border-color: var(--danger); background: color-mix(in oklch, var(--danger) 12%, transparent); animation: micpulse 1.2s ease-in-out infinite; }
 @keyframes micpulse { 0%,100% { box-shadow: 0 0 0 0 color-mix(in oklch, var(--danger) 40%, transparent); } 50% { box-shadow: 0 0 0 5px transparent; } }
 @media (prefers-reduced-motion: reduce) { .mic-btn.listening { animation: none; } }
-#voice-toggle[aria-pressed="true"] { color: var(--primary); }
 .speaking-badge { display: inline-flex; align-items: center; gap: .35rem; font-size: 11px; color: var(--primary); margin-left: .5rem; }
 .speaking-badge .bar { width: 2px; height: 9px; background: currentColor; border-radius: 1px; animation: eq .9s ease-in-out infinite; }
 .speaking-badge .bar:nth-child(2) { animation-delay: .15s; } .speaking-badge .bar:nth-child(3) { animation-delay: .3s; }
@@ -609,9 +630,16 @@ details[open] > summary .disclosure svg { transform: rotate(90deg); }
           </button>
         </form>
         <div class="composer-meta">
-          <div style="display:flex;gap:1rem;align-items:center">
-            <button type="button" id="skip-btn">Not sure — skip this one</button>
-            <button type="button" id="voice-toggle" class="hidden" aria-pressed="false">🔊 Interviewer voice: off</button>
+          <div class="meta-controls">
+            <button type="button" id="skip-btn" class="pill">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m5 4 10 8-10 8V4zM19 5v14"/></svg>
+              Skip — not sure
+            </button>
+            <button type="button" id="voice-toggle" class="pill hidden" aria-pressed="false">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5 6 9H2v6h4l5 4V5z"/><path class="wave" d="M15.5 8.5a5 5 0 0 1 0 7M19 5a9 9 0 0 1 0 14"/></svg>
+              <span id="voice-label">Voice off</span>
+            </button>
+            <select id="voice-picker" class="voice-picker hidden" aria-label="Choose interviewer voice"></select>
           </div>
           <span class="mono" id="word-count"></span>
         </div>
@@ -691,12 +719,13 @@ const voice = {
   supportedTTS: "speechSynthesis" in window,
   SR: window.SpeechRecognition || window.webkitSpeechRecognition,
   enabled: localStorage.getItem("callback-ai-voice") === "on",
+  chosenURI: localStorage.getItem("callback-ai-voice-uri") || "",
   voices: [],
   recognizer: null,
   listening: false,
 };
 
-function loadVoices() { voice.voices = speechSynthesis.getVoices() || []; }
+function loadVoices() { voice.voices = speechSynthesis.getVoices() || []; populateVoicePicker(); }
 if (voice.supportedTTS) { loadVoices(); speechSynthesis.onvoiceschanged = loadVoices; }
 
 // Rank the available browser voices and pick the best match for the
@@ -779,11 +808,17 @@ function setVoiceEnabled(on) {
   localStorage.setItem("callback-ai-voice", on ? "on" : "off");
   const btn = $("voice-toggle");
   btn.setAttribute("aria-pressed", String(on));
-  btn.textContent = on ? "🔊 Interviewer voice: on" : "🔇 Interviewer voice: off";
+  $("voice-label").textContent = on ? "Voice on" : "Voice off";
   if (!on && voice.supportedTTS) speechSynthesis.cancel();
 }
 
 $("voice-toggle").onclick = () => setVoiceEnabled(!voice.enabled);
+$("voice-picker").onchange = (e) => {
+  voice.chosenURI = e.target.value;
+  localStorage.setItem("callback-ai-voice-uri", voice.chosenURI);
+  if (voice.supportedTTS) speechSynthesis.cancel();
+  if (voice.enabled && state.interviewer) speakQuestion("Okay — this is how I'll sound.");
+};
 
 // ---- speech-to-text (answer by voice) ----
 function initRecognizer() {
