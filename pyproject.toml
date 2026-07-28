@@ -18,6 +18,12 @@ dependencies = [
 [project.optional-dependencies]
 dev = ["pytest>=8.0"]
 
+[tool.pytest.ini_options]
+# eval/ is a top-level package (not under src/), so put repo root + src on the
+# path -- makes `pytest` and `python -m pytest` behave the same in CI and locally.
+pythonpath = [".", "src"]
+testpaths = ["tests"]
+
 [project.scripts]
 callback-ai = "callback_ai.cli.main:main"
 callback-ai-serve = "callback_ai.server:main"
