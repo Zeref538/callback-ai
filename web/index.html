@@ -311,6 +311,12 @@ details[open] > summary .disclosure svg { transform: rotate(90deg); }
 .persona-role { font-size: 9.5px; text-transform: uppercase; letter-spacing: .06em; color: color-mix(in oklch, var(--who, var(--primary)) 75%, var(--muted-fg)); font-weight: 600; }
 .persona-blurb { font-size: 11.5px; line-height: 1.45; color: var(--muted-fg); margin-top: auto; }
 
+/* segmented control (seniority) */
+.seg { display: inline-flex; padding: 3px; gap: 3px; border-radius: .6rem; border: 1px solid var(--border); background: var(--secondary); }
+.seg-btn { padding: .4rem 1rem; border-radius: .45rem; font-size: 13px; font-weight: 500; color: var(--muted-fg); transition: background .15s, color .15s; }
+.seg-btn:hover { color: var(--foreground); }
+.seg-btn[aria-pressed="true"] { background: var(--card); color: var(--foreground); box-shadow: 0 1px 3px rgba(0,0,0,.18); }
+
 /* ---------- chat ---------- */
 .transcript { flex: 1; padding-bottom: 1rem; }
 .transcript > * + * { margin-top: 1.25rem; }
@@ -410,6 +416,10 @@ details[open] > summary .disclosure svg { transform: rotate(90deg); }
 .voice-viz .vlabel { margin-left: .45rem; opacity: .9; }
 @keyframes viz { 0%, 100% { height: 4px; opacity: .55; } 50% { height: 17px; opacity: 1; } }
 @media (prefers-reduced-motion: reduce) { .voice-viz .vbar { animation: none; height: 10px; } }
+/* live mic meter: inline heights (real amplitude) drive the bars, so kill the
+   CSS keyframe animation and tint it as "recording" */
+.voice-viz.viz-live { color: var(--danger); border-color: color-mix(in oklch, var(--danger) 35%, transparent); background: color-mix(in oklch, var(--danger) 10%, transparent); box-shadow: 0 0 20px -6px color-mix(in oklch, var(--danger) 45%, transparent); }
+.voice-viz.viz-live .vbar { animation: none; opacity: 1; transition: height .06s linear; }
 
 /* ---------- report ---------- */
 .report-hero { display: flex; flex-direction: column; align-items: center; gap: 1.25rem; }
@@ -657,6 +667,15 @@ details[open] > summary .disclosure svg { transform: rotate(90deg); }
             </div>
           </div>
 
+          <div class="field" style="margin-bottom:1.1rem">
+            <label style="display:block;margin-bottom:.5rem">Target level <span style="color:var(--muted-fg);font-weight:400">— how hard they press</span></label>
+            <div class="seg" role="group" aria-label="Target seniority">
+              <button type="button" class="seg-btn" data-seniority="junior">Junior</button>
+              <button type="button" class="seg-btn" data-seniority="mid" aria-pressed="true">Mid</button>
+              <button type="button" class="seg-btn" data-seniority="senior">Senior</button>
+            </div>
+          </div>
+
           <button type="submit" class="btn-primary" id="start-btn"><span id="start-btn-label">Start interview</span></button>
         </form>
       </section>
@@ -728,7 +747,7 @@ details[open] > summary .disclosure svg { transform: rotate(90deg); }
 <script>
 const API = "/api";
 const HISTORY_KEY = "callback-ai-history";
-const state = { sessionId: null, persona: "neutral", competencies: [], budget: 12, turn: 0, spend: {}, report: null };
+const state = { sessionId: null, persona: "neutral", seniority: "mid", competencies: [], budget: 12, turn: 0, spend: {}, report: null };
 const $ = (id) => document.getElementById(id);
 const els = {
   transcript: $("transcript"), answerInput: $("answer-input"), answerForm: $("answer-form"),
@@ -964,23 +983,63 @@ function stopSpeaking() {
   showSpeaking(false);
 }
 
-function showSpeaking(on) {
+function ensureVizBars() {
   const viz = $("voice-viz");
-  if (!on) { viz.classList.add("hidden"); return; }
-  const who = state.interviewer;
-  if (!viz.dataset.built) {
-    // 9 bars, each with its own tempo/phase so the waveform never looks looped.
-    let bars = "";
-    for (let i = 0; i < 9; i++) {
-      const dur = (620 + Math.random() * 520).toFixed(0);
-      const delay = (-Math.random() * 900).toFixed(0);
-      bars += `<span class="vbar" style="animation-duration:${dur}ms;animation-delay:${delay}ms"></span>`;
-    }
-    viz.innerHTML = bars + '<span class="vlabel"></span>';
-    viz.dataset.built = "1";
+  if (viz.dataset.built) return viz;
+  let bars = "";
+  for (let i = 0; i < 9; i++) {
+    const dur = (620 + Math.random() * 520).toFixed(0);
+    const delay = (-Math.random() * 900).toFixed(0);
+    bars += `<span class="vbar" style="animation-duration:${dur}ms;animation-delay:${delay}ms"></span>`;
   }
+  viz.innerHTML = bars + '<span class="vlabel"></span>';
+  viz.dataset.built = "1";
+  return viz;
+}
+
+// TTS speaking indicator — CSS-animated bars (we can't tap synth output).
+function showSpeaking(on) {
+  const viz = ensureVizBars();
+  if (!on) { if (!micMeter) viz.classList.add("hidden"); return; }  // mic meter, if live, keeps it shown
+  const who = state.interviewer;
+  viz.classList.remove("viz-live");
+  viz.querySelectorAll(".vbar").forEach((b) => { b.style.height = ""; });  // let CSS animate
   viz.querySelector(".vlabel").textContent = who ? `${who.name} is speaking…` : "speaking…";
   viz.classList.remove("hidden");
+}
+
+// Real mic-level meter — drives the same bars from live audio amplitude while
+// you answer by voice (browsers DO allow tapping a getUserMedia stream).
+let micMeter = null;
+function startMicMeter(stream) {
+  const viz = ensureVizBars();
+  viz.classList.add("viz-live");
+  viz.querySelector(".vlabel").textContent = "Listening…";
+  viz.classList.remove("hidden");
+  const Ctx = window.AudioContext || window.webkitAudioContext;
+  const ctx = new Ctx();
+  const analyser = ctx.createAnalyser();
+  analyser.fftSize = 64;
+  ctx.createMediaStreamSource(stream).connect(analyser);
+  const bars = [...viz.querySelectorAll(".vbar")];
+  const data = new Uint8Array(analyser.frequencyBinCount);
+  micMeter = { ctx, stream, raf: 0 };
+  const draw = () => {
+    analyser.getByteFrequencyData(data);
+    bars.forEach((b, i) => { b.style.height = (4 + (data[i * 2] / 255) * 15).toFixed(1) + "px"; });
+    micMeter.raf = requestAnimationFrame(draw);
+  };
+  draw();
+}
+function stopMicMeter() {
+  if (!micMeter) return;
+  cancelAnimationFrame(micMeter.raf);
+  try { micMeter.stream.getTracks().forEach((t) => t.stop()); } catch {}
+  try { micMeter.ctx.close(); } catch {}
+  micMeter = null;
+  const viz = $("voice-viz");
+  viz.classList.remove("viz-live");
+  viz.classList.add("hidden");
 }
 
 function setVoiceEnabled(on) {
@@ -1032,6 +1091,7 @@ function initRecognizer() {
     // Chrome ends recognition on a pause; restart while the user still wants it.
     if (micWanted) { try { r.start(); return; } catch {} }
     voice.listening = false; $("mic-btn").classList.remove("listening");
+    stopMicMeter();
   };
   return r;
 }
@@ -1041,12 +1101,12 @@ async function startMic() {
   if (!voice.recognizer) { toast("Voice answers need Chrome or Edge — this browser doesn't support them.", true); return; }
   // Explicitly request the mic first. SpeechRecognition alone often never
   // shows a permission prompt (so it silently does nothing) — getUserMedia
-  // reliably triggers it and confirms a device exists. We stop the tracks
-  // right away; recognition opens its own capture.
+  // reliably triggers it and confirms a device exists. We keep the stream to
+  // drive the live level meter; recognition opens its own capture.
   if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      stream.getTracks().forEach((t) => t.stop());
+      startMicMeter(stream);
     } catch {
       toast("Microphone blocked. Click the mic/lock icon in the address bar, allow it for this site, then try again.", true);
       return;
@@ -1078,6 +1138,15 @@ document.querySelectorAll(".persona").forEach((card) => {
     document.querySelectorAll(".persona").forEach((c) => c.setAttribute("aria-pressed", "false"));
     card.setAttribute("aria-pressed", "true");
     state.persona = card.dataset.persona;
+  };
+});
+
+// ---------- seniority ----------
+document.querySelectorAll(".seg-btn").forEach((btn) => {
+  btn.onclick = () => {
+    document.querySelectorAll(".seg-btn").forEach((b) => b.setAttribute("aria-pressed", "false"));
+    btn.setAttribute("aria-pressed", "true");
+    state.seniority = btn.dataset.seniority;
   };
 });
 
@@ -1276,6 +1345,7 @@ $("setup-form").addEventListener("submit", async (e) => {
         resume: $("resume").value.trim() || null,
         portfolio_link: $("portfolio-link").value.trim() || null,
         persona: state.persona,
+        seniority: state.seniority || "mid",
       }),
     });
     if (!resp.ok) throw new Error((await resp.json()).detail || "Failed to start session.");
