@@ -5,6 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>callback-ai — adaptive interview simulator</title>
 <meta name="color-scheme" content="dark light">
+<!-- SVG favicon: the callback mark on an emerald tile, matches the in-app logo -->
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%2310b981'/%3E%3Cpath d='M13 13l-4 4 4 4' fill='none' stroke='%23052e1b' stroke-width='2.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3Cpath d='M9 17h9a5 5 0 0 0 5-5V9' fill='none' stroke='%23052e1b' stroke-width='2.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
@@ -165,12 +167,14 @@ ul { list-style: none; padding: 0; }
 .side-head { display: flex; align-items: center; justify-content: space-between; padding: 1rem; }
 .logo-row { display: flex; align-items: center; gap: .5rem; }
 .logo-mark {
-  width: 1.75rem; height: 1.75rem; border-radius: .5rem;
+  position: relative; width: 1.85rem; height: 1.85rem; border-radius: .55rem;
   display: flex; align-items: center; justify-content: center;
-  font-family: 'JetBrains Mono', monospace; font-size: 12px; font-weight: 700;
-  background: linear-gradient(135deg, var(--primary), color-mix(in oklch, var(--primary) 55%, var(--info)));
+  background: linear-gradient(140deg, color-mix(in oklch, var(--primary) 88%, white), var(--primary) 45%, color-mix(in oklch, var(--primary) 60%, var(--info)));
   color: var(--primary-fg);
+  box-shadow: 0 2px 8px -2px color-mix(in oklch, var(--primary) 70%, transparent),
+              inset 0 1px 0 color-mix(in oklch, white 45%, transparent);
 }
+.logo-mark svg { width: 1.05rem; height: 1.05rem; }
 .logo-text { font-size: 14px; font-weight: 600; }
 .logo-text span { color: var(--primary); }
 .icon-btn {
@@ -558,7 +562,7 @@ details[open] > summary .disclosure svg { transform: rotate(90deg); }
   <aside class="sidebar" id="sidebar">
     <div class="side-head">
       <div class="logo-row">
-        <div class="logo-mark" aria-hidden="true">&gt;_</div>
+        <div class="logo-mark" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 10 5 14l4 4"/><path d="M5 14h9a5 5 0 0 0 5-5V6"/></svg></div>
         <div class="logo-text">callback<span>-ai</span></div>
       </div>
       <div style="display:flex;gap:2px">
@@ -768,7 +772,7 @@ details[open] > summary .disclosure svg { transform: rotate(90deg); }
 <div class="loader hidden" id="loader" aria-live="polite">
   <div class="loader-card">
     <div class="loader-title">
-      <span class="logo-mark" aria-hidden="true">&gt;_</span>
+      <span class="logo-mark" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 10 5 14l4 4"/><path d="M5 14h9a5 5 0 0 0 5-5V6"/></svg></span>
       Setting up your interview
     </div>
     <ul class="loader-steps" id="loader-steps"></ul>
