@@ -995,49 +995,75 @@ function setVoiceEnabled(on) {
 $("voice-toggle").onclick = () => setVoiceEnabled(!voice.enabled);
 
 // ---- speech-to-text (answer by voice) ----
+// micWanted tracks the user's intent: Chrome ends recognition after a pause,
+// so we auto-restart while the user still wants the mic on, and only truly
+// stop when they tap it off.
+let micWanted = false;
 function initRecognizer() {
   if (!voice.SR) return null;
   const r = new voice.SR();
   r.lang = "en-US";
   r.interimResults = true;
-  r.continuous = false;
+  r.continuous = true;       // keep the mic open instead of cutting after one phrase
   let base = "";
-  r.onstart = () => { voice.listening = true; $("mic-btn").classList.add("listening"); base = els.answerInput.value; };
+  r.onstart = () => { voice.listening = true; $("mic-btn").classList.add("listening"); base = els.answerInput.value.trim(); };
   r.onresult = (e) => {
-    let interim = "";
-    for (let i = e.resultIndex; i < e.results.length; i++) interim += e.results[i][0].transcript;
-    els.answerInput.value = (base ? base + " " : "") + interim;
+    let finalTxt = "", interim = "";
+    for (let i = 0; i < e.results.length; i++) {
+      const t = e.results[i][0].transcript;
+      if (e.results[i].isFinal) finalTxt += t;
+      else interim += t;
+    }
+    els.answerInput.value = [base, finalTxt, interim].filter(Boolean).join(" ");
     els.answerInput.dispatchEvent(new Event("input"));
   };
   r.onerror = (e) => {
-    voice.listening = false; $("mic-btn").classList.remove("listening");
-    if (e.error === "aborted") return;
+    if (e.error === "aborted" || e.error === "no-speech") return;  // benign; onend handles restart
+    micWanted = false;
     const msg = {
-      "not-allowed": "Microphone blocked. Allow mic access for this site in your browser, then try again.",
-      "service-not-allowed": "Microphone blocked by the browser/OS. Check your privacy settings.",
-      "no-speech": "Didn't catch anything — tap the mic and speak.",
-      "audio-capture": "No microphone found.",
+      "not-allowed": "Microphone blocked. Click the mic/lock icon in the address bar, allow the mic for this site, then try again.",
+      "service-not-allowed": "Microphone blocked by the browser or OS. Check your privacy settings.",
+      "audio-capture": "No microphone found — plug one in or check your input device.",
       "network": "Speech recognition needs a network connection.",
     }[e.error] || `Mic error: ${e.error}`;
     toast(msg, true);
   };
-  r.onend = () => { voice.listening = false; $("mic-btn").classList.remove("listening"); };
+  r.onend = () => {
+    // Chrome ends recognition on a pause; restart while the user still wants it.
+    if (micWanted) { try { r.start(); return; } catch {} }
+    voice.listening = false; $("mic-btn").classList.remove("listening");
+  };
   return r;
 }
 
-$("mic-btn").onclick = () => {
+async function startMic() {
   if (!voice.recognizer) voice.recognizer = initRecognizer();
   if (!voice.recognizer) { toast("Voice answers need Chrome or Edge — this browser doesn't support them.", true); return; }
-  if (voice.listening) { voice.recognizer.stop(); return; }
+  // Explicitly request the mic first. SpeechRecognition alone often never
+  // shows a permission prompt (so it silently does nothing) — getUserMedia
+  // reliably triggers it and confirms a device exists. We stop the tracks
+  // right away; recognition opens its own capture.
+  if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      stream.getTracks().forEach((t) => t.stop());
+    } catch {
+      toast("Microphone blocked. Click the mic/lock icon in the address bar, allow it for this site, then try again.", true);
+      return;
+    }
+  }
   stopSpeaking();
-  // start() throws synchronously if recognition is already live or the mic is
-  // blocked; without this the button just did nothing. Surface it instead.
+  micWanted = true;
   try {
     voice.recognizer.start();
   } catch (err) {
-    if (err.name === "InvalidStateError") { try { voice.recognizer.stop(); } catch {} return; }
-    toast(`Couldn't start the mic — ${err.message}`, true);
+    if (err.name !== "InvalidStateError") { micWanted = false; toast(`Couldn't start the mic — ${err.message}`, true); }
   }
+}
+
+$("mic-btn").onclick = () => {
+  if (voice.listening || micWanted) { micWanted = false; try { voice.recognizer.stop(); } catch {} return; }
+  startMic();
 };
 
 // Reveal voice controls that this browser actually supports, once a session starts.
@@ -1303,7 +1329,7 @@ els.answerForm.addEventListener("submit", async (e) => {
   if (!answer || !state.sessionId) return;
 
   stopSpeaking();  // stop reading once you answer
-  if (voice.listening) voice.recognizer.stop();
+  if (voice.listening || micWanted) { micWanted = false; try { voice.recognizer.stop(); } catch {} }
 
   // Text stays in the box until the request succeeds — a failure used to eat it.
   const pending = bubbleAnswer(answer);
