@@ -31,7 +31,7 @@ def test_full_session_via_api(tmp_path, monkeypatch):
 
     client = TestClient(app)
 
-    start_resp = client.post("/api/sessions", json={"job_post": "some job post", "budget": 1})
+    start_resp = client.post("/api/sessions", json={"job_post": "Backend engineer on the payments team, distributed systems.", "budget": 1})
     assert start_resp.status_code == 200
     data = start_resp.json()
     session_id = data["session_id"]
@@ -60,7 +60,7 @@ def test_report_before_done_returns_409(tmp_path, monkeypatch):
     session_routes.SESSIONS.clear()
 
     client = TestClient(app)
-    start_resp = client.post("/api/sessions", json={"job_post": "some job post", "budget": 3})
+    start_resp = client.post("/api/sessions", json={"job_post": "Backend engineer on the payments team, distributed systems.", "budget": 3})
     session_id = start_resp.json()["session_id"]
 
     report_resp = client.get(f"/api/sessions/{session_id}/report")

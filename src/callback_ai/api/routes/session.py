@@ -37,7 +37,15 @@ router = APIRouter()
 
 SESSIONS: dict[str, InterviewSession] = {}
 
-MAX_UPLOAD_BYTES = 5 * 1024 * 1024  # 5 MB -- a resume or job post, not a book
+MAX_UPLOAD_BYTES = 5 * 1024 * 1024   # 5 MB -- a resume or job post, not a book
+MAX_JOB_POST_CHARS = 20_000          # a posting, not a novel -- caps token cost/abuse
+MAX_SESSIONS = 200                   # in-process store; evict oldest so memory can't grow unbounded
+
+
+def _remember_session(session_id: str, session: InterviewSession) -> None:
+    SESSIONS[session_id] = session
+    while len(SESSIONS) > MAX_SESSIONS:
+        SESSIONS.pop(next(iter(SESSIONS)))  # dict is insertion-ordered -> FIFO eviction
 
 
 @router.post("/extract")
@@ -95,13 +103,21 @@ _SENIORITY_DELTA = {"junior": -0.1, "mid": 0.0, "senior": 0.1}
 
 @router.post("/sessions", response_model=StartSessionResponse)
 def start_session(req: StartSessionRequest) -> StartSessionResponse:
+    job_post = req.job_post.strip()
+    if len(job_post) < 20:
+        raise HTTPException(status_code=422, detail="Paste a job post (at least a sentence or two) to start.")
+    if len(job_post) > MAX_JOB_POST_CHARS:
+        raise HTTPException(status_code=422, detail=f"Job post is too long (max {MAX_JOB_POST_CHARS:,} characters).")
+    if req.persona not in {"friendly", "neutral", "adversarial"}:
+        raise HTTPException(status_code=422, detail="Unknown interviewer.")
+
     chat = build_chat()
 
     # Fold seniority into the rubric text (so competencies reflect the level and
     # the cache keys on it) before parsing.
-    job_text = req.job_post
+    job_text = job_post
     if req.seniority in _SENIORITY_DELTA and req.seniority != "mid":
-        job_text = f"[Target seniority level: {req.seniority}]\n{req.job_post}"
+        job_text = f"[Target seniority level: {req.seniority}]\n{job_post}"
 
     # The three ingest parses are independent LLM calls -- run them together so
     # setup latency is one call's worth, not three back to back.
@@ -128,7 +144,7 @@ def start_session(req: StartSessionRequest) -> StartSessionResponse:
         logger=logger,
         budget=req.budget,
     )
-    SESSIONS[logger.session_id] = session
+    _remember_session(logger.session_id, session)
 
     question = session.next_question()
     persona = session.persona
@@ -153,6 +169,10 @@ def submit_answer(session_id: str, req: AnswerRequest) -> AnswerResponse:
     session = SESSIONS.get(session_id)
     if session is None:
         raise HTTPException(status_code=404, detail="unknown session")
+    if session.done:
+        raise HTTPException(status_code=409, detail="This interview is already finished.")
+    if not req.answer.strip():
+        raise HTTPException(status_code=422, detail="Answer can't be empty.")
 
     result = session.submit_answer(req.answer)
     # next_question() also flips session.done and logs session_end once the budget is spent.
