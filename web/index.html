@@ -517,6 +517,19 @@ details[open] > summary .disclosure svg { transform: rotate(90deg); }
   .fade-up, .beam, .mote { animation: none !important; }
   .ring-value, .meter-fill { transition: none; }
 }
+
+/* ---------- print / save-as-PDF ---------- */
+@media print {
+  .stage, .sidebar, .scrim, .topbar, .composer-wrap, .toast, .report-actions,
+  .modal-scrim, .loader, .followup-tag, .row-end, .msg-head, .bubble-a, .fb { display: none !important; }
+  html, body { background: #fff !important; color: #111 !important; }
+  .main, .content { max-width: 100% !important; padding: 0 !important; }
+  .card, .comp-card { break-inside: avoid; page-break-inside: avoid; border-color: #ddd !important; background: #fff !important; box-shadow: none !important; }
+  .report-summary, .report-verdict-sub, .quote, .hint, .comp-name, .muted-fg, .eyebrow { color: #333 !important; }
+  .model-answer p { background: #f3f3f3 !important; color: #111 !important; }
+  .model-answer summary { display: none !important; }
+  .transcript > *:not(.card):not(div) { display: none; }
+}
 </style>
 </head>
 <body>
@@ -1537,6 +1550,41 @@ const VERDICT_LINE = {
   no:       { headline: "Not a callback yet", sub: "The stories are there — the specifics aren't. That's a fixable problem." },
 };
 
+const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+
+// A radar chart of per-competency scores — one glance shows the shape of a
+// candidate (spiky = uneven, round = well-rounded). Hand-rolled SVG, no lib.
+function buildRadar(reports) {
+  const n = reports.length;
+  if (n < 3) return null;                 // needs a polygon
+  const size = 260, cx = size / 2, cy = size / 2, R = 90;
+  const ang = (i) => (Math.PI * 2 * i) / n - Math.PI / 2;
+  const pt = (i, r) => [cx + Math.cos(ang(i)) * r, cy + Math.sin(ang(i)) * r];
+  const poly = (r) => reports.map((_, i) => pt(i, r).map((v) => v.toFixed(1)).join(",")).join(" ");
+
+  let grid = "";
+  [0.25, 0.5, 0.75, 1].forEach((f) => {
+    grid += `<polygon points="${poly(R * f)}" fill="none" stroke="color-mix(in oklch, var(--foreground) 8%, transparent)" stroke-width="1"/>`;
+  });
+  let spokes = "", labels = "", dots = "";
+  reports.forEach((r, i) => {
+    const [ex, ey] = pt(i, R);
+    spokes += `<line x1="${cx}" y1="${cy}" x2="${ex.toFixed(1)}" y2="${ey.toFixed(1)}" stroke="color-mix(in oklch, var(--foreground) 8%, transparent)" stroke-width="1"/>`;
+    const [lx, ly] = pt(i, R + 15);
+    const anchor = Math.abs(lx - cx) < 6 ? "middle" : lx < cx ? "end" : "start";
+    const short = r.competency.length > 16 ? r.competency.slice(0, 15) + "…" : r.competency;
+    labels += `<text x="${lx.toFixed(1)}" y="${ly.toFixed(1)}" text-anchor="${anchor}" dominant-baseline="middle" font-size="9" fill="var(--muted-fg)">${esc(short)}</text>`;
+    const [dx, dy] = pt(i, R * Math.max(0.02, r.score));
+    dots += `<circle cx="${dx.toFixed(1)}" cy="${dy.toFixed(1)}" r="3" fill="var(--primary)"/>`;
+  });
+  const dataPoly = reports.map((r, i) => pt(i, R * Math.max(0.02, r.score)).map((v) => v.toFixed(1)).join(",")).join(" ");
+  return `<svg viewBox="0 0 ${size} ${size}" width="100%" style="max-width:300px;display:block;margin:.25rem auto 0" role="img" aria-label="Per-competency score radar">
+    ${grid}${spokes}
+    <polygon points="${dataPoly}" fill="color-mix(in oklch, var(--primary) 20%, transparent)" stroke="var(--primary)" stroke-width="2" stroke-linejoin="round"/>
+    ${dots}${labels}
+  </svg>`;
+}
+
 function renderReport(report) {
   state.report = report;
   const reports = report.competency_reports;
@@ -1574,6 +1622,15 @@ function renderReport(report) {
   card.querySelectorAll(".chip").forEach((el, i) => { el.textContent = report.top_fixes[i]; });
   els.transcript.appendChild(card);
 
+  const radar = buildRadar(reports);
+  if (radar) {
+    const rc = document.createElement("div");
+    rc.className = "card fade-up";
+    rc.style.marginTop = "1rem";
+    rc.innerHTML = `<div class="eyebrow" style="margin-bottom:.25rem">Where you stand</div>${radar}`;
+    els.transcript.appendChild(rc);
+  }
+
   const list = document.createElement("div");
   list.style.marginTop = "1rem";
   reports.forEach((r) => {
@@ -1609,10 +1666,19 @@ function renderReport(report) {
 
   const actions = document.createElement("div");
   actions.className = "report-actions";
-  actions.innerHTML = `<button class="btn-outline" id="copy-report">Copy report</button>
+  actions.innerHTML = `<button class="btn-outline" id="download-pdf">Download PDF</button>
+    <button class="btn-outline" id="copy-report">Copy report</button>
     <button class="btn-outline" id="restart-btn">New interview</button>`;
   els.transcript.appendChild(actions);
   $("restart-btn").onclick = () => location.reload();
+  // Native print-to-PDF (no library). Expand every "Stronger answer" first so
+  // it lands in the PDF, then restore what was collapsed.
+  $("download-pdf").onclick = () => {
+    const collapsed = [...document.querySelectorAll("details:not([open])")];
+    collapsed.forEach((d) => { d.open = true; });
+    window.print();
+    setTimeout(() => collapsed.forEach((d) => { d.open = false; }), 600);
+  };
   $("copy-report").onclick = async () => {
     const lines = [
       "callback-ai session report",
