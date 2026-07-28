@@ -110,6 +110,7 @@ def start_session(req: StartSessionRequest) -> StartSessionResponse:
         raise HTTPException(status_code=422, detail=f"Job post is too long (max {MAX_JOB_POST_CHARS:,} characters).")
     if req.persona not in {"friendly", "neutral", "adversarial"}:
         raise HTTPException(status_code=422, detail="Unknown interviewer.")
+    budget = max(1, min(30, req.budget))   # clamp: 0 skips the whole interview, huge burns quota
 
     chat = build_chat()
 
@@ -128,6 +129,14 @@ def start_session(req: StartSessionRequest) -> StartSessionResponse:
         rubric = f_rubric.result()
         resume_claims = f_resume.result() if f_resume else []
         portfolio_claims = f_portfolio.result() if f_portfolio else []
+
+    if not rubric.competencies:
+        # A rubric with no competencies would crash the allocator; happens when
+        # the "job post" has no substance for the model to weigh.
+        raise HTTPException(
+            status_code=422,
+            detail="Couldn't find any competencies to interview on — paste a fuller job description.",
+        )
     inventory = merge_claims(resume_claims, portfolio_claims)
 
     persona = get_persona(req.persona)
@@ -142,7 +151,7 @@ def start_session(req: StartSessionRequest) -> StartSessionResponse:
         persona=persona,
         chat=chat,
         logger=logger,
-        budget=req.budget,
+        budget=budget,
     )
     _remember_session(logger.session_id, session)
 
@@ -153,7 +162,7 @@ def start_session(req: StartSessionRequest) -> StartSessionResponse:
         question=question,
         competency=session._current_competency,
         competencies=[c.name for c in rubric.competencies],
-        budget=req.budget,
+        budget=budget,
         conflicts=len(inventory.conflicts),
         interviewer=InterviewerInfo(
             key=persona.key, name=persona.name, role=persona.role,

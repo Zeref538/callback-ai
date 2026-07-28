@@ -50,6 +50,19 @@ def test_unknown_persona_rejected():
     assert r.status_code == 422
 
 
+def test_empty_rubric_rejected(monkeypatch):
+    empty = json.dumps({"target_position": None, "competencies": []})
+    monkeypatch.setattr(session_routes, "build_chat", lambda: FakeChat([empty]))
+    r = client.post("/api/sessions", json={"job_post": GOOD_JOB})
+    assert r.status_code == 422
+
+
+def test_budget_is_clamped(monkeypatch):
+    monkeypatch.setattr(session_routes, "build_chat", lambda: FakeChat([RUBRIC, QUESTION]))
+    r = client.post("/api/sessions", json={"job_post": GOOD_JOB, "budget": 999})
+    assert r.status_code == 200 and r.json()["budget"] == 30
+
+
 # ---------- answer guards ----------
 
 def test_answer_unknown_session_404():
