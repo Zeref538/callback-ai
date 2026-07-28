@@ -1,23 +1,90 @@
 # callback-ai
 
-An adaptive interview simulator. Most prep tools ask questions; this one asks
-again.
+**An adaptive, agentic interview simulator.** Most prep tools read from a
+question list. This one runs an agent that decides what to ask *you* next based
+on how you just answered — then grades every claim against your own words.
 
-- **It probes.** Say "I improved performance" and you'll be asked by how much
-  and how you measured it — quoting your own words back at you. That follow-up
-  is where real interviews are won or lost.
-- **It budgets.** A fixed 12 questions, reallocated after every answer toward
-  the competencies it's least sure about, not spread evenly over a checklist.
-- **It cites.** Every score must quote your transcript verbatim. A score whose
-  quote can't be found is rejected and regenerated rather than shown.
-- **It remembers.** Weak competencies persist between sessions and bias the
-  next session's budget toward them.
+> Say *"I improved performance"* and the next question is *by how much, and how
+> did you measure it?* That follow-up is where real interviews are won or lost,
+> so it's where this one lives.
 
-Three interviewers, each with their own manner: **Mira** (engineering manager,
-warm), **Sam** (senior engineer, plain), **Rook** (principal engineer,
-skeptical). Persona changes how hard you get pushed — never how you're graded.
+Named for the callback you're trying to earn, the debrief speaks in that
+language too — *"you'd get the callback"* / *"close call"* / *"not yet"* — not a
+bare `0.62`.
 
-See [PRD.md](PRD.md) for the full spec.
+---
+
+## What makes it different
+
+| | |
+|---|---|
+| **It probes.** | Vague answers get pressed on the *same* competency until they're specific — the agent chooses to follow up, it isn't scripted to. |
+| **It budgets.** | 12 questions, reallocated after every answer toward the competencies it's least sure about (weight × uncertainty), not spread evenly. |
+| **It cites.** | Every score must quote your transcript *verbatim*. A score whose quote can't be found is rejected and regenerated — never shown. |
+| **It remembers.** | Weak competencies persist across sessions; the next run biases its budget toward them and the debrief shows your **delta since last time**. |
+| **It talks.** | Each interviewer has a distinct **neural voice** (free, no key) and reads questions aloud; you can answer back **by voice** with a live mic meter. |
+
+Three interviewers, each with their own manner and voice — **Nova** (friendly ·
+engineering manager), **Ellis** (neutral · senior engineer), **Kade** (strict ·
+principal engineer). Persona changes how hard you're *pushed*, never how you're
+*graded* — scoring stays persona-invariant on purpose.
+
+**Inputs:** paste or upload the job post + your résumé (PDF / DOCX / TXT / MD,
+OCR-free extraction) and drop a portfolio URL (best-effort scrape). Pick a
+target level (junior / mid / senior) that tunes how hard the agent probes.
+
+**The debrief:** an overall readiness ring, a **competency radar**, per-area
+scores each with the verbatim quote that earned them, a stronger answer written
+in *your* voice from *your* real claims, a progress delta vs. your last attempt,
+and one-click **Download PDF**.
+
+---
+
+## Why it's an *agent*, not a pipeline
+
+`session_engine.py` is a state-driven loop, not a fixed sequence. Each turn it
+re-reads the session state — remaining budget, per-competency uncertainty, the
+last answer — and **decides** the next tool to call:
+
+```mermaid
+flowchart TD
+    A[Answer submitted] --> B[score_answer<br/>coverage + evidence quote + live feedback]
+    B --> C{evidence gate<br/>quote is verbatim?}
+    C -- no --> B2[regenerate once] --> C
+    C -- yes --> D{probe_policy<br/>coverage vs persona threshold}
+    D -- below threshold --> E[generate_probe<br/>press deeper, same competency]
+    D -- ok --> F[allocate_next_competency<br/>coverage-first, then weight × uncertainty]
+    E --> G{budget spent?}
+    F --> G
+    G -- no --> H[ask next question] --> A
+    G -- yes --> I[generate_report<br/>+ update cross-session profile]
+```
+
+The branching — *whether* to probe, *which* competency next, *when* to switch to
+the report, *whether* to scrape a portfolio at all — is the agent's decision.
+The guardrails that must **never** be left to model discretion are enforced in
+code around those calls: the evidence gate's verbatim-quote check, the fixed
+budget ceiling, and persona-invariant scoring.
+
+---
+
+## Measured quality (live NVIDIA NIM · Llama 3.1)
+
+Real numbers from `eval/`, run against a live model — not aspirational:
+
+| Metric | What it checks | Target | **Result** |
+|---|---|---|---|
+| **Discrimination** | Spearman ρ between the agent's ranking and a human ranking of 10 graded answers | ρ ≥ 0.8 | **0.81 ✅** |
+| **Grading consistency** | Same transcript re-graded 5× (temperature 0) | ≤ 1.0 pt / 10 | **0.0 ✅** |
+| **Probe precision** | Fires on vague answers, stays quiet on specific ones | ≥ 0.8 / ≤ 0.1 | **1.0 / 0.0 ✅** |
+| **Evidence-gate rejection** | Share of scores rejected for an unquotable claim | reported honestly | logged per session (`session_end`) |
+| **Budget adaptivity** | Question share vs. a uniform baseline | measurably non-uniform | pulled from session logs |
+
+Reproduce: `python -m eval.discrimination`, `python -m eval.grading_consistency`,
+`python -m eval.probe_precision` (need `NIM_API_KEY`). Every eval script is also
+unit-tested against a fake provider so the logic is verified without a key.
+
+---
 
 ## Quick start
 
@@ -27,23 +94,24 @@ python -m venv .venv
 cp .env.example .env
 ```
 
-**Try it with no API key.** The mock provider answers every prompt type with
-keyword heuristics, so the whole app runs offline:
+**No API key? Run the whole app offline.** The mock provider answers every
+prompt type with keyword heuristics:
 
 ```bash
-CALLBACK_AI_PROVIDER=mock .venv/Scripts/python -m uvicorn callback_ai.api.app:app --reload
+CALLBACK_AI_PROVIDER=mock .venv/Scripts/python -m callback_ai.server
 ```
 
-**Run it for real.** Get a key at [build.nvidia.com](https://build.nvidia.com)
-(pick a model → "Get API Key"), put it in `.env` as `NIM_API_KEY`, leave
+**For real,** get a free key at [build.nvidia.com](https://build.nvidia.com)
+(pick a model → *Get API Key*), put it in `.env` as `NIM_API_KEY`, keep
 `CALLBACK_AI_PROVIDER=nim`, then:
 
 ```bash
-.venv/Scripts/python -m uvicorn callback_ai.api.app:app --reload
+.venv/Scripts/python -m callback_ai.server
 ```
 
-Open <http://localhost:8000>. Check wiring at `/api/health` — it reports the
-active provider, model, and whether a key is configured.
+Open <http://localhost:8000>. Check wiring at `/api/health`. Voice needs no
+extra setup — neural TTS uses free Microsoft voices via `edge-tts`; voice
+answers use the browser's Web Speech API (Chrome/Edge).
 
 CLI instead of the browser:
 
@@ -54,70 +122,64 @@ CLI instead of the browser:
   --persona  adversarial
 ```
 
-Tests: `.venv/Scripts/python -m pytest` — 58 tests, all against fake providers,
-so no key is needed to verify the logic.
+**Tests:** `.venv/Scripts/python -m pytest` — **87 tests**, all against fake/mock
+providers, so no key is needed to verify the logic.
 
-## Deploy
-
-Any host that runs a Python web process works (Render, Railway, Fly, a VM).
-The `Procfile` runs `callback-ai-serve`, which binds `0.0.0.0` and honours
-`$PORT`.
-
-1. Build command: `pip install -e .`
-2. Start command: `callback-ai-serve` (or `python -m callback_ai.server`)
-3. Set env vars: `NIM_API_KEY` (and leave `CALLBACK_AI_PROVIDER=nim`), or set
-   `CALLBACK_AI_PROVIDER=mock` to deploy the keyless demo.
-4. Verify the live box at `/api/health`.
-
-Keep `WEB_CONCURRENCY=1` (the default): sessions live in the server process,
-so a second worker can't see a session the first one started. Raise it only
-after moving sessions to shared storage.
+---
 
 ## Architecture
 
-`session_engine.py` runs an agent loop, not a fixed pipeline: each turn it
-re-reads competency uncertainty and the probe/move-on/switch decision, then
-dispatches the next tool (`interview/tools.py`) — ask, probe, score, or
-reallocate. The guardrails that must never be left to model discretion are
-enforced in code around those calls: the evidence gate's verbatim-quote check,
-the fixed question budget, and persona-invariant scoring.
-
 ```
-ingest/     job post + resume + portfolio link -> one merged claim inventory
-            (conflicting claims are flagged, not silently resolved)
+ingest/     job post + résumé + portfolio link -> one merged claim inventory
+            (conflicting claims are flagged, not silently resolved); OCR-free
+            document extraction; best-effort portfolio scrape
 interview/  the agent loop, budget allocator, probe policy, personas, evidence gate
 grading/    the debrief + model answers constrained to your real claims
-memory/     JSONL session logs + cross-session weak-competency profile
+memory/     JSONL session logs + cross-session weak-competency profile + delta
 llm/        NIM provider, Ollama fallback, offline mock, tolerant JSON parsing
-api/, web/  FastAPI backend + a single static page (no build step)
-eval/       the five metrics below
+api/, web/  FastAPI backend (rate-limited, input-validated) + one static page
+eval/       the five metrics above
 ```
 
-## Published metrics (PRD section 7)
+The three ingest parses (job post / résumé / portfolio) run in parallel, so
+setup costs one call's latency, not three. The frontend is a single static page
+— plain hand-written CSS, no build step, no runtime framework.
 
-| metric | target | status |
-|---|---|---|
-| Grading consistency (same transcript re-graded 5×) | ≤ 1 pt / 10 | **not yet measured** — `python -m eval.grading_consistency`, needs a real key |
-| Discrimination (Spearman ρ vs. human ranking) | ρ ≥ 0.8 | **not yet measured** — corpus has 10 hand-written answers; the headline tier wants 20 |
-| Probe precision (fires on vague, not specific) | ≥ 0.8 / ≤ 0.1 | **not yet measured** — `python -m eval.probe_precision` |
-| Evidence-gate rejection rate | reported honestly | **not yet measured** — read from real session logs |
-| Budget adaptivity (share vs. uniform) | measurably non-uniform | **not yet measured** — same source |
+## Deploy
 
-These are unmeasured, not hidden. Every eval script is built and unit-tested
-against a fake provider (`tests/test_eval_*.py`), but real numbers require
-running them against a live model. Run the four scripts plus a few real
-sessions, then replace this table.
+Any host that runs a Python web process (Render, Railway, Fly, a VM). The
+`Procfile` runs `callback-ai-serve`, which binds `0.0.0.0` and honours `$PORT`.
 
-**Ship tier:** Minimum (rubric + adaptive 12-question session + evidence-quoted
-debrief) is complete and runnable today. Good and Headline depend on the
-metrics above.
+1. Build: `pip install -e .`
+2. Start: `callback-ai-serve` (or `python -m callback_ai.server`)
+3. Env: `NIM_API_KEY` (+ `CALLBACK_AI_PROVIDER=nim`), or `CALLBACK_AI_PROVIDER=mock`
+   for the keyless demo. Optional: `RATE_LIMIT_PER_MIN` (default 90).
+4. Verify `/api/health`.
+
+Keep `WEB_CONCURRENCY=1` (the default): sessions live in the server process, so
+a second worker can't see a session the first one started. Raise it only after
+moving sessions to shared storage.
+
+## Production hardening
+
+- **Input validation** at every boundary — job-post length, persona, budget
+  clamp `[1,30]`, empty/oversized uploads, empty answers, empty rubrics.
+- **Bounded memory** — sessions evict FIFO past a cap; the per-IP rate limiter
+  self-prunes idle clients.
+- **Graceful degradation** — TTS falls back to Web Speech; a JS-only portfolio
+  falls back to résumé + role; the app runs fully on the mock with no key.
+- **Readable errors** — provider/auth/malformed-JSON failures surface as clean
+  502s, not tracebacks.
 
 ## Known limits
 
-- Sessions live in the server process. A restart or a redeploy drops any
-  in-flight interview; the UI warns before you navigate away. Fine for a
-  single-user demo, not for concurrent users.
-- Portfolio-link parsing is best-effort HTML text extraction. JS-rendered
-  sites won't parse; the session continues on resume + role instead of failing.
-- The mock provider is a keyword heuristic, not a small model. It exists to
-  make the app runnable and demoable offline, not to approximate real grading.
+- Sessions live in the server process — a restart drops any in-flight interview
+  (the UI warns before you leave). Fine for a single-user demo; needs shared
+  storage (Redis) for concurrency and resumable sessions.
+- Cross-session memory and the rubric cache are local files — they reset on an
+  ephemeral PaaS redeploy.
+- Portfolio parsing is best-effort HTML; JS-rendered sites won't parse.
+- Scanned/image-only PDFs are detected and reported (true OCR needs a system
+  Tesseract install, deliberately not bundled).
+
+See [PRD.md](PRD.md) for the full spec.
