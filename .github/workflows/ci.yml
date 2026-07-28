@@ -1,0 +1,36 @@
+name: CI
+
+on:
+  push:
+    branches: [master, main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.11", "3.12"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+      - name: Install
+        run: pip install -e ".[dev]"
+      - name: Run tests
+        run: pytest -q
+      - name: Smoke-test the app on the mock provider (no key needed)
+        env:
+          CALLBACK_AI_PROVIDER: mock
+        run: |
+          python -c "
+          from fastapi.testclient import TestClient
+          from callback_ai.api.app import app
+          c = TestClient(app)
+          assert c.get('/api/health').json()['status'] == 'ok'
+          r = c.post('/api/sessions', json={'job_post': 'Backend engineer, payments, distributed systems, on-call.', 'budget': 3})
+          assert r.status_code == 200, r.text
+          print('mock smoke ok:', r.json()['interviewer']['name'])
+          "

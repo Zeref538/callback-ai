@@ -1,5 +1,9 @@
 # callback-ai
 
+[![CI](https://github.com/Zeref538/callback-ai/actions/workflows/ci.yml/badge.svg)](https://github.com/Zeref538/callback-ai/actions/workflows/ci.yml)
+[![Deploy to Render](https://img.shields.io/badge/deploy-Render-46E3B7?logo=render&logoColor=white)](https://render.com/deploy?repo=https://github.com/Zeref538/callback-ai)
+&nbsp;·&nbsp; 90 tests ·&nbsp; Python 3.11+ ·&nbsp; FastAPI
+
 **An adaptive, agentic interview simulator.** Most prep tools read from a
 question list. This one runs an agent that decides what to ask *you* next based
 on how you just answered — then grades every claim against your own words.
@@ -147,7 +151,11 @@ setup costs one call's latency, not three. The frontend is a single static page
 
 ## Deploy
 
-Any host that runs a Python web process (Render, Railway, Fly, a VM). The
+**One click:** the repo ships a [`render.yaml`](render.yaml) blueprint — in
+Render, *New → Blueprint → this repo*, then set `NIM_API_KEY` in the dashboard
+(it's `sync:false`, never committed). Health-checks `/api/health` automatically.
+
+**Any host** that runs a Python web process (Render, Railway, Fly, a VM). The
 `Procfile` runs `callback-ai-serve`, which binds `0.0.0.0` and honours `$PORT`.
 
 1. Build: `pip install -e .`

@@ -1,0 +1,24 @@
+# One-click deploy blueprint for Render (https://render.com).
+# In the Render dashboard: New -> Blueprint -> point at this repo.
+# Then set NIM_API_KEY in the service's Environment tab (it's marked sync:false
+# so it is never committed). Leave CALLBACK_AI_PROVIDER=mock to deploy the
+# keyless demo, or set it to nim once the key is in.
+services:
+  - type: web
+    name: callback-ai
+    runtime: python
+    plan: free
+    buildCommand: pip install -e .
+    startCommand: callback-ai-serve
+    healthCheckPath: /api/health
+    envVars:
+      - key: CALLBACK_AI_PROVIDER
+        value: nim
+      - key: NIM_MODEL
+        value: meta/llama-3.1-8b-instruct
+      - key: WEB_CONCURRENCY
+        value: "1"        # sessions are in-process; a 2nd worker can't see them
+      - key: RATE_LIMIT_PER_MIN
+        value: "90"
+      - key: NIM_API_KEY
+        sync: false       # set this in the dashboard, never in the repo
