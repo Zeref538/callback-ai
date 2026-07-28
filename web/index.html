@@ -448,6 +448,8 @@ details[open] > summary .disclosure svg { transform: rotate(90deg); }
 .comp-card-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 14px; font-weight: 500; }
 .band-pill { padding: 1px 7px; border-radius: 999px; font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; }
 .comp-score { font-family: 'JetBrains Mono', monospace; font-size: 14px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.trend { font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: 600; padding: 1px 6px; border-radius: 999px; border: 1px solid; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.since-last { display: flex; align-items: center; gap: .4rem; margin-top: 1rem; padding: .6rem .8rem; border-radius: .6rem; font-size: 13px; border: 1px solid color-mix(in oklch, var(--primary) 30%, transparent); background: color-mix(in oklch, var(--primary) 8%, transparent); }
 .meter { height: 6px; border-radius: 999px; overflow: hidden; margin-bottom: .625rem; background: color-mix(in oklch, var(--foreground) 10%, transparent); }
 .meter-fill { height: 100%; border-radius: 999px; width: 0; transition: width 700ms cubic-bezier(.16,1,.3,1); }
 .quote { border-left: 2px solid color-mix(in oklch, var(--foreground) 15%, transparent); padding-left: .625rem; font-family: 'JetBrains Mono', monospace; font-size: 12px; line-height: 1.6; color: var(--muted-fg); }
@@ -1521,12 +1523,12 @@ async function loadReport() {
   const resp = await fetch(`${API}/sessions/${state.sessionId}/report`);
   if (!resp.ok) { toast("Could not load the report.", true); return; }
   const data = await resp.json();
-  renderReport(data.report);
+  renderReport(data.report, data.delta);
   const rs = data.report.competency_reports;
   addHistory({
     id: state.sessionId, title: state.jobTitle || "Interview session",
     score: rs.reduce((s, r) => s + r.score, 0) / (rs.length || 1),
-    report: data.report, at: Date.now(),
+    report: data.report, delta: data.delta, at: Date.now(),
   });
 }
 
@@ -1539,7 +1541,7 @@ function renderReportFromHistory(item) {
   els.transcript.innerHTML = "";
   state.sessionId = null;
   state.report = item.report;
-  renderReport(item.report);
+  renderReport(item.report, item.delta);
 }
 
 // The product is named for the callback you're trying to earn, so the verdict
@@ -1585,10 +1587,23 @@ function buildRadar(reports) {
   </svg>`;
 }
 
-function renderReport(report) {
+// Renders a "vs last time" chip from the delta the report endpoint returns
+// (previous last_score per competency, or null if this is the first time).
+function trendChip(d) {
+  if (!d || d.delta == null) return "";
+  const up = d.delta >= 0;
+  const col = Math.abs(d.delta) < 0.03 ? "var(--muted-fg)" : up ? "var(--success)" : "var(--danger)";
+  const arrow = Math.abs(d.delta) < 0.03 ? "→" : up ? "↑" : "↓";
+  const sign = up && d.delta > 0 ? "+" : "";
+  return `<span class="trend" title="was ${d.previous.toFixed(2)} last time" style="color:${col};border-color:color-mix(in oklch, ${col} 35%, transparent)">${arrow} ${sign}${d.delta.toFixed(2)} vs last</span>`;
+}
+
+function renderReport(report, delta) {
   state.report = report;
+  delta = delta || {};
   const reports = report.competency_reports;
   const overall = reports.reduce((s, r) => s + r.score, 0) / (reports.length || 1);
+  const repeated = reports.filter((r) => delta[r.competency] && delta[r.competency].delta != null);
   const verdictKey = overall >= 0.7 ? "callback" : overall >= 0.5 ? "maybe" : "no";
   const who = state.interviewer;
   const C = 2 * Math.PI * 54;
@@ -1622,6 +1637,16 @@ function renderReport(report) {
   card.querySelectorAll(".chip").forEach((el, i) => { el.textContent = report.top_fixes[i]; });
   els.transcript.appendChild(card);
 
+  if (repeated.length) {
+    const up = repeated.filter((r) => delta[r.competency].delta > 0.02).length;
+    const down = repeated.filter((r) => delta[r.competency].delta < -0.02).length;
+    const note = document.createElement("div");
+    note.className = "since-last fade-up";
+    note.innerHTML = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/></svg>
+      <span>Since your last attempt on these areas: <strong>${up} up</strong>, ${down} down. Compared on ${repeated.length} repeated ${repeated.length === 1 ? "competency" : "competencies"}.</span>`;
+    els.transcript.appendChild(note);
+  }
+
   const radar = buildRadar(reports);
   if (radar) {
     const rc = document.createElement("div");
@@ -1640,6 +1665,7 @@ function renderReport(report) {
     item.innerHTML = `
       <div class="comp-card-head">
         <span class="comp-card-name"></span>
+        ${trendChip(delta[r.competency])}
         <span class="band-pill" style="background:color-mix(in oklch, ${bandColor(r.score)} 15%, transparent);color:${bandColor(r.score)}">${bandLabel(r.score)}</span>
         <span class="comp-score">${r.score.toFixed(2)}</span>
       </div>

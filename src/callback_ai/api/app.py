@@ -1,3 +1,6 @@
+import os
+import time
+from collections import defaultdict, deque
 from pathlib import Path
 
 from fastapi import FastAPI, Request
@@ -10,6 +13,33 @@ from callback_ai.llm.client import AuthError, ProviderError
 from callback_ai.llm.json_parse import MalformedModelJSON
 
 app = FastAPI(title="callback-ai")
+
+# ---- rate limiting ----
+# In-process per-IP sliding window. The app is single-worker by design (sessions
+# live in memory), so an in-process limiter is consistent -- no Redis needed. A
+# full session is ~27 POSTs over ~10 min, so 90/min is generous for real use and
+# only trips on abuse loops. ponytail: swap for a shared limiter if we ever scale
+# past one worker.
+RATE_LIMIT_PER_MIN = int(os.getenv("RATE_LIMIT_PER_MIN", "90"))
+_hits: dict[str, deque] = defaultdict(deque)
+
+
+@app.middleware("http")
+async def rate_limit(request: Request, call_next):
+    if request.method == "POST" and request.url.path.startswith("/api/"):
+        ip = request.client.host if request.client else "unknown"
+        now = time.monotonic()
+        dq = _hits[ip]
+        while dq and now - dq[0] > 60:
+            dq.popleft()
+        if len(dq) >= RATE_LIMIT_PER_MIN:
+            return JSONResponse(status_code=429, content={"detail": "Too many requests — give it a moment and try again."})
+        dq.append(now)
+        # Opportunistically drop idle IPs so the dict can't grow unbounded.
+        if len(_hits) > 2000:
+            for k in [k for k, v in _hits.items() if not v or now - v[-1] > 60]:
+                _hits.pop(k, None)
+    return await call_next(request)
 
 
 @app.exception_handler(AuthError)
