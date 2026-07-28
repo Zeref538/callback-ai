@@ -328,6 +328,7 @@ details[open] > summary .disclosure svg { transform: rotate(90deg); }
   background: var(--primary); color: var(--primary-fg);
 }
 .msg-role { font-size: 12px; font-weight: 500; color: var(--muted-fg); }
+.followup-tag { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; padding: 1px 7px; border-radius: 999px; color: var(--warning); background: color-mix(in oklch, var(--warning) 14%, transparent); border: 1px solid color-mix(in oklch, var(--warning) 32%, transparent); }
 .msg-opening { color: var(--muted-fg); font-style: italic; border-left: 2px solid color-mix(in oklch, var(--foreground) 15%, transparent); padding-left: .75rem; }
 .msg-q { font-size: 15px; line-height: 1.6; }
 .row-end { display: flex; justify-content: flex-end; }
@@ -370,6 +371,10 @@ details[open] > summary .disclosure svg { transform: rotate(90deg); }
 .send-btn:disabled { opacity: .4; cursor: not-allowed; }
 .composer-meta { display: flex; align-items: center; justify-content: space-between; gap: .5rem; padding: .45rem .25rem 0; font-size: 11px; color: var(--muted-fg); }
 .meta-controls { display: flex; align-items: center; gap: .4rem; flex-wrap: wrap; }
+.meta-right { display: flex; align-items: center; gap: .6rem; flex-shrink: 0; }
+#answer-timer { display: inline-flex; align-items: center; gap: .3rem; }
+#answer-timer::before { content: ""; width: 5px; height: 5px; border-radius: 50%; background: var(--primary); }
+#answer-timer.slow::before { background: var(--warning); }
 .pill {
   display: inline-flex; align-items: center; gap: .35rem;
   padding: .3rem .65rem; border-radius: 999px; font-size: 12px; font-weight: 500;
@@ -710,7 +715,10 @@ details[open] > summary .disclosure svg { transform: rotate(90deg); }
               <span id="voice-label">Voice off</span>
             </button>
           </div>
-          <span class="mono" id="word-count"></span>
+          <div class="meta-right">
+            <span class="mono" id="answer-timer" title="Time on this question"></span>
+            <span class="mono" id="word-count"></span>
+          </div>
         </div>
       </div>
     </div>
@@ -1276,13 +1284,31 @@ function bubbleQuestion(text, opts) {
   div.innerHTML = `<div class="msg-head">
       <div class="avatar" style="--who:${who.accent};width:1.5rem;height:1.5rem;font-size:11px">${who.name[0]}</div>
       <span class="msg-role">${who.name}${opts && opts.role ? ` · ${opts.role}` : ""}</span>
+      ${opts && opts.followup ? '<span class="followup-tag">↳ following up</span>' : ""}
     </div><div class="msg-q${opts && opts.opening ? " msg-opening" : ""}"></div>`;
   div.querySelector(".msg-q").textContent = text;
   els.transcript.appendChild(div);
   div.scrollIntoView({ behavior: "smooth", block: "end" });
   speakQuestion(text);  // read it aloud if interviewer voice is on
+  if (!(opts && opts.opening)) startQTimer();  // time each question the user must answer
   return div;
 }
+// ---------- per-question timer ----------
+let qTimer = null, qStart = 0;
+function startQTimer() {
+  clearInterval(qTimer);
+  qStart = Date.now();
+  const el = $("answer-timer");
+  const tick = () => {
+    const s = Math.floor((Date.now() - qStart) / 1000);
+    el.textContent = `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
+    el.classList.toggle("slow", s >= 90);   // amber past 90s — real interviews want tighter
+  };
+  tick();
+  qTimer = setInterval(tick, 1000);
+}
+function stopQTimer() { clearInterval(qTimer); qTimer = null; $("answer-timer").textContent = ""; $("answer-timer").classList.remove("slow"); }
+
 function bubbleAnswer(text) {
   const div = document.createElement("div");
   div.className = "fade-up row-end";
@@ -1399,6 +1425,7 @@ els.answerForm.addEventListener("submit", async (e) => {
   if (!answer || !state.sessionId) return;
 
   stopSpeaking();  // stop reading once you answer
+  stopQTimer();
   if (voice.listening || micWanted) { micWanted = false; try { voice.recognizer.stop(); } catch {} }
 
   // Text stays in the box until the request succeeds — a failure used to eat it.
@@ -1424,11 +1451,14 @@ els.answerForm.addEventListener("submit", async (e) => {
       stopSpeaking();
       await loadReport();
     } else {
+      // Same competency two turns running = the agent is probing deeper, not
+      // moving on — surface that as a "following up" tag on the next question.
+      const followup = data.next_competency === state.currentCompetency;
       state.turn = data.turn + 1;
       state.currentCompetency = data.next_competency;
       state.spend[data.next_competency] = (state.spend[data.next_competency] || 0) + 1;
       renderRubricPanel();
-      bubbleQuestion(data.next_question);
+      bubbleQuestion(data.next_question, { followup });
     }
   } catch (err) {
     pending.remove();
