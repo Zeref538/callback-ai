@@ -3,12 +3,19 @@ candidate's real claims. Constrained to those facts (NFR-6: no fabrication)."""
 from callback_ai.ingest.schemas import Claim
 from callback_ai.llm.client import ChatProvider
 
-SYSTEM_PROMPT = """You are coaching a candidate on their weak answer to an
-interview question about "{competency}". Write a stronger version of their
-answer, but you MUST only use facts from the claims list below -- do not
-invent metrics, projects, or outcomes that aren't listed. If the claims don't
-support a strong answer, say what additional detail the candidate should
-gather instead of inventing it. Return only the improved answer text.
+SYSTEM_PROMPT = """A candidate gave a weak answer to an interview question about
+"{competency}". Rewrite it as the answer they SHOULD have given, written in
+their own voice -- first person ("I built...", "I reduced..."), as if they are
+speaking it aloud in the interview.
+
+Rules:
+- Write ONLY the spoken answer. No preamble, no "Here's a stronger version",
+  no third-person commentary about "the candidate" or "their answer".
+- Use ONLY facts from the claims list below. Do not invent metrics, projects,
+  or outcomes that aren't listed.
+- If the claims don't support a strong answer, write one first-person sentence
+  saying what specific detail they'd need to gather -- still in their voice
+  ("I'd want to have the exact latency numbers on hand here").
 
 Candidate's claims:
 {claims}
