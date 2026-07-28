@@ -1,8 +1,13 @@
 # callback-ai
 
+### ▶︎ [Live demo — callback-ai.onrender.com](https://callback-ai.onrender.com)
+
 [![CI](https://github.com/Zeref538/callback-ai/actions/workflows/ci.yml/badge.svg)](https://github.com/Zeref538/callback-ai/actions/workflows/ci.yml)
-[![Deploy to Render](https://img.shields.io/badge/deploy-Render-46E3B7?logo=render&logoColor=white)](https://render.com/deploy?repo=https://github.com/Zeref538/callback-ai)
+[![Live](https://img.shields.io/badge/demo-live-46E3B7?logo=render&logoColor=white)](https://callback-ai.onrender.com)
 &nbsp;·&nbsp; 90 tests ·&nbsp; Python 3.11+ ·&nbsp; FastAPI
+
+> The live demo runs on Render's free tier, so the **first request after idle
+> takes ~50s to wake up** — give it a moment, then it's fast.
 
 **An adaptive, agentic interview simulator.** Most prep tools read from a
 question list. This one runs an agent that decides what to ask *you* next based
