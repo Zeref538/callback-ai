@@ -813,12 +813,23 @@ function showConfirm({ title, body, confirmLabel = "Leave", cancelLabel = "Stay"
 // Names each step so even a fast setup reads as real work. Steps are chosen
 // from what was actually submitted (résumé / portfolio only if given).
 function startLoader() {
-  const steps = ["Reading the job post", "Deriving the interview rubric"];
-  if ($("resume").value.trim()) steps.push("Reviewing your résumé");
-  if ($("portfolio-link").value.trim()) steps.push("Reading your portfolio site");
-  steps.push("Deciding where to press hardest");
-  const who = document.querySelector('.persona[aria-pressed="true"] .persona-name');
-  steps.push(`Writing ${who ? who.textContent : "your"} first question`);
+  const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
+  const whoEl = document.querySelector('.persona[aria-pressed="true"] .persona-name');
+  const name = whoEl ? whoEl.textContent.trim() : "your interviewer";
+  const poss = /s$/i.test(name) ? `${name}'` : `${name}'s`;  // Ellis' vs Nova's
+
+  // Varied phrasing so the setup doesn't read identically every run; the
+  // résumé/portfolio lines only appear when you actually supplied them.
+  const steps = [
+    pick(["Reading the job post", "Parsing the role", "Pulling out what this role needs", "Studying the posting"]),
+    pick(["Deriving the interview rubric", "Weighting the competencies", "Building a rubric from the posting", "Working out what to test"]),
+  ];
+  if ($("resume").value.trim())
+    steps.push(pick(["Reviewing your résumé", "Matching your résumé to the role", "Reading your background", "Mining your résumé for claims"]));
+  if ($("portfolio-link").value.trim())
+    steps.push(pick(["Scraping your portfolio", "Reading your portfolio site", "Pulling projects from your portfolio", "Fetching your portfolio"]));
+  steps.push(pick(["Deciding where to press hardest", "Choosing which competencies to probe", "Planning where to dig in", "Lining up the follow-ups"]));
+  steps.push(pick([`Writing ${poss} first question`, `Handing over to ${name}`, `${name} is getting ready`, `Warming up ${name}`]));
 
   const host = $("loader-steps");
   host.innerHTML = steps.map((s) => `<li class="lstep"><span class="lmark"></span><span></span></li>`).join("");
