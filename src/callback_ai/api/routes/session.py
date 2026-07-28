@@ -214,3 +214,31 @@ def get_report(session_id: str) -> dict:
     update_profile(session_scores, session_id)
 
     return {"report": report.model_dump(), "delta": delta}
+
+
+@router.get("/sessions/{session_id}/trace")
+def get_trace(session_id: str) -> dict:
+    """The agent's turn-by-turn decisions (which competency, what it scored, and
+    whether it probed / moved on / switched, with the reason). Surfaces the
+    agentic loop from the decision log rather than re-deriving it."""
+    session = SESSIONS.get(session_id)
+    if session is None:
+        raise HTTPException(status_code=404, detail="unknown session")
+
+    turns: dict[int, dict] = {}
+    for e in session.logger.events:
+        turn = e.get("turn")
+        if turn is None:
+            continue
+        row = turns.setdefault(turn, {"turn": turn})
+        if e["type"] == "question":
+            row["competency"] = e.get("competency")
+            row["question"] = e.get("text")
+        elif e["type"] == "scoring":
+            row["score"] = e.get("coverage_score")
+            row["low_confidence"] = e.get("low_confidence")
+        elif e["type"] == "decision":
+            row["action"] = e.get("action")           # probe | move_on | switch
+            row["reason"] = e.get("reason")
+            row["remaining_budget"] = e.get("remaining_budget")
+    return {"trace": [turns[t] for t in sorted(turns)]}

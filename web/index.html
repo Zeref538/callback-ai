@@ -450,6 +450,14 @@ details[open] > summary .disclosure svg { transform: rotate(90deg); }
 .comp-score { font-family: 'JetBrains Mono', monospace; font-size: 14px; font-weight: 600; font-variant-numeric: tabular-nums; }
 .trend { font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: 600; padding: 1px 6px; border-radius: 999px; border: 1px solid; white-space: nowrap; font-variant-numeric: tabular-nums; }
 .since-last { display: flex; align-items: center; gap: .4rem; margin-top: 1rem; padding: .6rem .8rem; border-radius: .6rem; font-size: 13px; border: 1px solid color-mix(in oklch, var(--primary) 30%, transparent); background: color-mix(in oklch, var(--primary) 8%, transparent); }
+.trace-card > summary { list-style: none; }
+.trace-list { margin-top: .75rem; display: flex; flex-direction: column; gap: 2px; }
+.trace-row { display: grid; grid-template-columns: 1.4rem 1fr auto auto; align-items: center; gap: .6rem; padding: .4rem .5rem; border-radius: .4rem; font-size: 12.5px; }
+.trace-row:nth-child(odd) { background: color-mix(in oklch, var(--foreground) 4%, transparent); }
+.trace-turn { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--muted-fg); text-align: center; }
+.trace-comp { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.trace-score { font-family: 'JetBrains Mono', monospace; font-weight: 600; font-variant-numeric: tabular-nums; }
+.trace-act { font-size: 11px; font-weight: 500; white-space: nowrap; }
 .meter { height: 6px; border-radius: 999px; overflow: hidden; margin-bottom: .625rem; background: color-mix(in oklch, var(--foreground) 10%, transparent); }
 .meter-fill { height: 100%; border-radius: 999px; width: 0; transition: width 700ms cubic-bezier(.16,1,.3,1); }
 .quote { border-left: 2px solid color-mix(in oklch, var(--foreground) 15%, transparent); padding-left: .625rem; font-family: 'JetBrains Mono', monospace; font-size: 12px; line-height: 1.6; color: var(--muted-fg); }
@@ -1523,12 +1531,16 @@ async function loadReport() {
   const resp = await fetch(`${API}/sessions/${state.sessionId}/report`);
   if (!resp.ok) { toast("Could not load the report.", true); return; }
   const data = await resp.json();
-  renderReport(data.report, data.delta);
+  // The agent trace (its turn-by-turn decisions) is a separate, best-effort
+  // fetch — the report shouldn't fail if the trace can't be built.
+  let trace = null;
+  try { const tr = await fetch(`${API}/sessions/${state.sessionId}/trace`); if (tr.ok) trace = (await tr.json()).trace; } catch {}
+  renderReport(data.report, data.delta, trace);
   const rs = data.report.competency_reports;
   addHistory({
     id: state.sessionId, title: state.jobTitle || "Interview session",
     score: rs.reduce((s, r) => s + r.score, 0) / (rs.length || 1),
-    report: data.report, delta: data.delta, at: Date.now(),
+    report: data.report, delta: data.delta, trace, at: Date.now(),
   });
 }
 
@@ -1541,7 +1553,7 @@ function renderReportFromHistory(item) {
   els.transcript.innerHTML = "";
   state.sessionId = null;
   state.report = item.report;
-  renderReport(item.report, item.delta);
+  renderReport(item.report, item.delta, item.trace);
 }
 
 // The product is named for the callback you're trying to earn, so the verdict
@@ -1598,7 +1610,39 @@ function trendChip(d) {
   return `<span class="trend" title="was ${d.previous.toFixed(2)} last time" style="color:${col};border-color:color-mix(in oklch, ${col} 35%, transparent)">${arrow} ${sign}${d.delta.toFixed(2)} vs last</span>`;
 }
 
-function renderReport(report, delta) {
+// The agent trace: makes the "agentic" claim visible — each turn shows which
+// competency it chose, what it scored, and whether it pressed deeper or moved on.
+const ACTION_LABEL = {
+  probe:   { text: "pressed deeper", color: "var(--warning)", icon: "↳" },
+  move_on: { text: "moved on",       color: "var(--success)", icon: "→" },
+  switch:  { text: "switched focus", color: "var(--info)",    icon: "⇄" },
+};
+function buildTrace(trace) {
+  if (!trace || !trace.length) return null;
+  const rows = trace.map((t) => {
+    const a = ACTION_LABEL[t.action] || { text: t.action || "asked", color: "var(--muted-fg)", icon: "•" };
+    const score = typeof t.score === "number"
+      ? `<span class="trace-score" style="color:${bandColor(t.score)}">${t.score.toFixed(2)}</span>` : "";
+    return `<li class="trace-row">
+      <span class="trace-turn">${t.turn}</span>
+      <span class="trace-comp" title="${esc(t.competency || "")}">${esc(t.competency || "—")}</span>
+      ${score}
+      <span class="trace-act" style="color:${a.color}">${a.icon} ${a.text}</span>
+    </li>`;
+  }).join("");
+  const d = document.createElement("details");
+  d.className = "card fade-up trace-card";
+  d.style.marginTop = "1rem";
+  d.innerHTML = `<summary><span class="disclosure" style="font-weight:500;color:var(--foreground)">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="m9 18 6-6-6-6"/></svg>
+      How the agent ran — its decisions, turn by turn
+    </span></summary>
+    <ul class="trace-list">${rows}</ul>
+    <p class="hint" style="margin-top:.6rem">The agent re-decides after every answer: it probes a weak answer on the same competency, and moves on once it has enough signal — spending its 12 questions where it's least sure.</p>`;
+  return d;
+}
+
+function renderReport(report, delta, trace) {
   state.report = report;
   delta = delta || {};
   const reports = report.competency_reports;
@@ -1689,6 +1733,9 @@ function renderReport(report, delta) {
     requestAnimationFrame(() => setTimeout(() => { item.querySelector(".meter-fill").style.width = pct + "%"; }, 80));
   });
   els.transcript.appendChild(list);
+
+  const traceEl = buildTrace(trace);
+  if (traceEl) els.transcript.appendChild(traceEl);
 
   const actions = document.createElement("div");
   actions.className = "report-actions";

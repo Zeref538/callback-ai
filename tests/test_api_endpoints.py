@@ -89,6 +89,23 @@ def test_answer_after_finish_409(monkeypatch):
 
 # ---------- session eviction ----------
 
+def test_trace_reports_turn_decisions(monkeypatch):
+    score = json.dumps({"coverage_score": 0.8, "evidence_quote": "I built a cache.",
+                        "vagueness_signals": [], "live_feedback": {"verdict": "correct", "suggestion": "ok"}})
+    monkeypatch.setattr(session_routes, "build_chat", lambda: FakeChat([RUBRIC, QUESTION, score]))
+    sid = client.post("/api/sessions", json={"job_post": GOOD_JOB, "budget": 1}).json()["session_id"]
+    client.post(f"/api/sessions/{sid}/answer", json={"answer": "I built a cache."})
+    trace = client.get(f"/api/sessions/{sid}/trace").json()["trace"]
+    assert trace and trace[0]["turn"] == 1
+    assert trace[0]["competency"] == "System Design"
+    assert trace[0]["score"] == 0.8
+    assert trace[0]["action"] in {"probe", "move_on", "switch"}
+
+
+def test_trace_unknown_session_404():
+    assert client.get("/api/sessions/nope/trace").status_code == 404
+
+
 def test_sessions_are_evicted_past_cap(monkeypatch):
     monkeypatch.setattr(session_routes, "MAX_SESSIONS", 3)
     session_routes.SESSIONS.clear()
