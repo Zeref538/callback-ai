@@ -8,6 +8,7 @@ class StartSessionRequest(BaseModel):
     resume: str | None = None
     portfolio_link: str | None = None
     persona: str = "neutral"
+    seniority: str | None = None   # junior | mid | senior -- tunes how hard the agent probes
     budget: int = settings.question_budget
 
 

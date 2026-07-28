@@ -5,6 +5,8 @@ single-user portfolio demo; swap for real storage if this ever needs multiple
 concurrent users or to survive a server restart.
 """
 import re
+from concurrent.futures import ThreadPoolExecutor
+from dataclasses import replace
 
 from fastapi import APIRouter, File, HTTPException, UploadFile
 from fastapi.responses import StreamingResponse
@@ -86,20 +88,42 @@ async def text_to_speech(req: TTSRequest) -> StreamingResponse:
     return StreamingResponse(stream(), media_type="audio/mpeg")
 
 
+# How much the chosen seniority shifts a persona's probe threshold: a senior
+# candidate gets pressed harder, a junior a little less.
+_SENIORITY_DELTA = {"junior": -0.1, "mid": 0.0, "senior": 0.1}
+
+
 @router.post("/sessions", response_model=StartSessionResponse)
 def start_session(req: StartSessionRequest) -> StartSessionResponse:
     chat = build_chat()
-    rubric = parse_job_post(req.job_post, chat)
 
-    resume_claims = parse_resume(req.resume, chat) if req.resume else []
-    portfolio_claims = parse_portfolio_link(req.portfolio_link, chat) if req.portfolio_link else []
+    # Fold seniority into the rubric text (so competencies reflect the level and
+    # the cache keys on it) before parsing.
+    job_text = req.job_post
+    if req.seniority in _SENIORITY_DELTA and req.seniority != "mid":
+        job_text = f"[Target seniority level: {req.seniority}]\n{req.job_post}"
+
+    # The three ingest parses are independent LLM calls -- run them together so
+    # setup latency is one call's worth, not three back to back.
+    with ThreadPoolExecutor(max_workers=3) as pool:
+        f_rubric = pool.submit(parse_job_post, job_text, chat)
+        f_resume = pool.submit(parse_resume, req.resume, chat) if req.resume else None
+        f_portfolio = pool.submit(parse_portfolio_link, req.portfolio_link, chat) if req.portfolio_link else None
+        rubric = f_rubric.result()
+        resume_claims = f_resume.result() if f_resume else []
+        portfolio_claims = f_portfolio.result() if f_portfolio else []
     inventory = merge_claims(resume_claims, portfolio_claims)
+
+    persona = get_persona(req.persona)
+    delta = _SENIORITY_DELTA.get(req.seniority or "mid", 0.0)
+    if delta:
+        persona = replace(persona, probe_threshold=max(0.0, min(1.0, persona.probe_threshold + delta)))
 
     logger = SessionLogger()
     session = InterviewSession(
         rubric=rubric,
         claims=inventory.claims,
-        persona=get_persona(req.persona),
+        persona=persona,
         chat=chat,
         logger=logger,
         budget=req.budget,
