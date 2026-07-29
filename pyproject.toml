@@ -1,6 +1,6 @@
 [project]
 name = "callback-ai"
-version = "0.1.0"
+version = "1.0.0"
 description = "Adaptive interview simulator agent: probes vague answers, budgets questions by uncertainty, grades with cited evidence."
 requires-python = ">=3.10"
 dependencies = [
