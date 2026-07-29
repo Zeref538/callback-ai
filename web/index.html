@@ -1102,6 +1102,7 @@ function initRecognizer() {
   let base = "";
   r.onstart = () => { voice.listening = true; $("mic-btn").classList.add("listening"); base = els.answerInput.value.trim(); };
   r.onresult = (e) => {
+    if (!micWanted && !voice.listening) return;   // ignore stray results after we've stopped
     let finalTxt = "", interim = "";
     for (let i = 0; i < e.results.length; i++) {
       const t = e.results[i][0].transcript;
@@ -1156,8 +1157,19 @@ async function startMic() {
   }
 }
 
+// Hard-stop dictation: abort() ends it immediately (no trailing onresult that
+// could clobber the box), and we clear the meter/flags synchronously so a
+// Send that follows always goes through with the text already captured.
+function stopListening() {
+  micWanted = false;
+  voice.listening = false;
+  $("mic-btn").classList.remove("listening");
+  if (voice.recognizer) { try { voice.recognizer.abort(); } catch {} }
+  stopMicMeter();
+}
+
 $("mic-btn").onclick = () => {
-  if (voice.listening || micWanted) { micWanted = false; try { voice.recognizer.stop(); } catch {} return; }
+  if (voice.listening || micWanted) { stopListening(); return; }
   startMic();
 };
 
@@ -1453,7 +1465,7 @@ els.answerForm.addEventListener("submit", async (e) => {
 
   stopSpeaking();  // stop reading once you answer
   stopQTimer();
-  if (voice.listening || micWanted) { micWanted = false; try { voice.recognizer.stop(); } catch {} }
+  stopListening();  // hard-stop dictation so the captured text submits cleanly
 
   // Text stays in the box until the request succeeds — a failure used to eat it.
   const pending = bubbleAnswer(answer);
