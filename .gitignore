@@ -4,7 +4,6 @@ __pycache__/
 venv/
 .env
 data/sessions/*.jsonl
-data/profiles/*.json
 data/rubric_cache/*.json
 node_modules/
 .pytest_cache/

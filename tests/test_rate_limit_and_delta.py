@@ -42,7 +42,7 @@ def test_health_not_rate_limited(monkeypatch):
     assert all(client.get("/api/health").status_code == 200 for _ in range(5))
 
 
-def _run_session(client, monkeypatch, score_val, job):
+def _run_session(client, monkeypatch, score_val, job, previous=None):
     score = json.dumps({"coverage_score": score_val, "evidence_quote": "I built a cache.",
                         "vagueness_signals": [], "live_feedback": {"verdict": "correct", "suggestion": "ok"}})
     report_score = json.dumps({"score": score_val, "evidence_quote": "I built a cache."})
@@ -50,7 +50,7 @@ def _run_session(client, monkeypatch, score_val, job):
     # extra model_answer response covers the weak-competency path in the report
     monkeypatch.setattr(session_routes, "build_chat",
                         lambda: FakeChat([RUBRIC, QUESTION, score, report_score, model_answer]))
-    sid = client.post("/api/sessions", json={"job_post": job, "budget": 1}).json()["session_id"]
+    sid = client.post("/api/sessions", json={"job_post": job, "budget": 1, "previous_scores": previous or {}}).json()["session_id"]
     client.post(f"/api/sessions/{sid}/answer", json={"answer": "I built a cache."})
     return client.get(f"/api/sessions/{sid}/report").json()
 
@@ -63,7 +63,9 @@ def test_delta_none_first_time_then_measured(monkeypatch):
     assert first["delta"]["System Design"]["previous"] is None
     assert first["delta"]["System Design"]["delta"] is None
 
-    second = _run_session(client, monkeypatch, 0.8, GOOD_JOB + " gRPC.")
+    # the page sends its own last scores back (from local or account history)
+    previous = {r["competency"]: r["score"] for r in first["report"]["competency_reports"]}
+    second = _run_session(client, monkeypatch, 0.8, GOOD_JOB + " gRPC.", previous)
     d = second["delta"]["System Design"]
     assert d["previous"] == 0.4
     assert d["current"] == 0.8

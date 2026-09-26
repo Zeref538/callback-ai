@@ -27,5 +27,4 @@ TOOLS = {
     "allocate_next_competency": allocate_next_competency,
     "generate_question": generate_question,
     "generate_probe": generate_probe,
-    # "update_profile": added in week 3 once memory/profile_store.py exists
 }

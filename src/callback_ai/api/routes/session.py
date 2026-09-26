@@ -30,7 +30,6 @@ from callback_ai.interview.persona import get_persona
 from callback_ai.interview.session_engine import InterviewSession
 from callback_ai.llm.router import build_chat
 from callback_ai.memory.delta import compute_delta
-from callback_ai.memory.profile_store import load_profile, update_profile
 from callback_ai.memory.session_store import SessionLogger
 
 router = APIRouter()
@@ -153,6 +152,7 @@ def start_session(req: StartSessionRequest) -> StartSessionResponse:
         logger=logger,
         budget=budget,
     )
+    session.previous_scores = req.previous_scores  # read back by get_report for the delta
     _remember_session(logger.session_id, session)
 
     question = session.next_question()
@@ -209,9 +209,7 @@ def get_report(session_id: str) -> dict:
     report = generate_report(session.rubric, session.logger.events, session.claims, session.chat, session.gate)
 
     session_scores = {r.competency: r.score for r in report.competency_reports}
-    profile_before = load_profile()
-    delta = compute_delta(profile_before, session_scores)
-    update_profile(session_scores, session_id)
+    delta = compute_delta(session.previous_scores, session_scores)
 
     return {"report": report.model_dump(), "delta": delta}
 

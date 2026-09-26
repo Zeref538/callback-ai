@@ -1,4 +1,6 @@
-from pydantic import BaseModel
+from typing import Annotated
+
+from pydantic import BaseModel, Field
 
 from callback_ai.config import settings
 
@@ -10,6 +12,9 @@ class StartSessionRequest(BaseModel):
     persona: str = "neutral"
     seniority: str | None = None   # junior | mid | senior -- tunes how hard the agent probes
     budget: int = settings.question_budget
+    # The caller's last score per competency, from their own history (browser or
+    # account). Drives the report's "vs last time" delta; the server keeps none.
+    previous_scores: dict[str, Annotated[float, Field(ge=0, le=1)]] = Field(default_factory=dict, max_length=100)
 
 
 class InterviewerInfo(BaseModel):
