@@ -506,22 +506,97 @@ details[open] > summary .disclosure svg { transform: rotate(90deg); }
 .modal p { font-size: 13.5px; color: var(--muted-fg); margin-bottom: 1.2rem; }
 .modal-actions { display: flex; justify-content: flex-end; gap: .5rem; }
 
-/* ---------- account ---------- */
+/* ---------- account (sidebar) ---------- */
 .account { padding: .75rem .75rem 0; }
-.account .btn-outline { width: 100%; font-size: 13px; }
-.account-row { display: flex; flex-wrap: wrap; align-items: center; gap: .3rem .6rem; font-size: 12.5px; }
-.account-row .account-email { flex-basis: 100%; }
-.account-actions { display: flex; gap: .6rem; flex-shrink: 0; }
 .inline-link { color: var(--primary); text-decoration: underline; text-underline-offset: 2px; }
-.account-email { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--muted-fg); }
-.auth-google { width: 100%; display: flex; align-items: center; justify-content: center; gap: .5rem; }
-.auth-or { display: flex; align-items: center; gap: .6rem; margin: .9rem 0; font-size: 12px; color: var(--muted-fg); }
+.account-guest { display: grid; gap: .5rem; }
+.account-guest p { font-size: 12px; color: var(--muted-fg); line-height: 1.45; }
+.account-guest .btn-outline { width: 100%; font-size: 13px; font-weight: 500; }
+.account-card {
+  position: relative; display: flex; align-items: center; gap: .6rem;
+  padding: .5rem .35rem .5rem .5rem; border: 1px solid var(--border); border-radius: .75rem;
+  background: color-mix(in oklch, var(--card) 70%, transparent);
+}
+.avatar-initial {
+  flex-shrink: 0; width: 2rem; height: 2rem; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-family: 'Space Grotesk', 'Inter', sans-serif; font-weight: 600; font-size: 14px;
+  background: color-mix(in oklch, var(--primary) 16%, transparent); color: var(--primary);
+}
+.account-who { min-width: 0; flex: 1; display: grid; line-height: 1.3; }
+.account-name { font-size: 13px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.account-email { font-size: 11.5px; color: var(--muted-fg); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.account-menu {
+  position: absolute; right: 0; bottom: calc(100% + .4rem); z-index: 30; min-width: 11rem;
+  padding: .3rem; border: 1px solid var(--border); border-radius: .65rem; background: var(--card);
+  box-shadow: 0 12px 32px -12px rgba(0,0,0,.45);
+}
+.account-menu button {
+  display: block; width: 100%; text-align: left; padding: .5rem .6rem; border-radius: .45rem; font-size: 13px;
+}
+.account-menu button:hover, .account-menu button:focus-visible { background: var(--secondary); outline: none; }
+.account-menu .danger { color: var(--danger); }
+.foot-links { display: flex; gap: .9rem; margin-bottom: .35rem; }
+.foot-links a { color: var(--foreground); text-decoration: none; font-size: 12px; font-weight: 500; }
+.foot-links a:hover { color: var(--primary); }
+
+/* ---------- sign-in window ---------- */
+.auth-modal { position: relative; max-width: 25rem; padding: 1.5rem 1.5rem 1.35rem; }
+.auth-brand { display: flex; align-items: center; gap: .5rem; margin-bottom: 1.1rem; }
+.auth-modal h3 { font-size: 1.35rem; letter-spacing: -.02em; margin-bottom: .3rem; }
+.auth-modal p#auth-intro { margin-bottom: 1.1rem; line-height: 1.5; }
+.auth-close { position: absolute; top: .75rem; right: .75rem; }
+.auth-tabs {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 2px; padding: 3px; margin-bottom: 1rem;
+  border-radius: .6rem; background: var(--secondary);
+}
+.auth-tabs button {
+  padding: .45rem .5rem; border-radius: .45rem; font-size: 13px; font-weight: 500; color: var(--muted-fg);
+  transition: background .15s, color .15s;
+}
+.auth-tabs button[aria-selected="true"] { background: var(--card); color: var(--foreground); box-shadow: 0 1px 3px rgba(0,0,0,.18); }
+/* Google's sign-in button guidance: white face, grey outline, the four-colour G. */
+.google-btn {
+  width: 100%; height: 2.75rem; display: flex; align-items: center; justify-content: center; gap: .65rem;
+  border: 1px solid #dadce0; border-radius: .6rem; background: #fff; color: #1f1f1f;
+  font-size: 14px; font-weight: 500; transition: background .15s, box-shadow .15s;
+}
+.google-btn:hover { background: #f8f9fa; box-shadow: 0 1px 3px rgba(60,64,67,.25); }
+.google-btn svg { width: 18px; height: 18px; }
+.auth-or { display: flex; align-items: center; gap: .7rem; margin: 1rem 0; font-size: 12px; color: var(--muted-fg); }
 .auth-or::before, .auth-or::after { content: ""; flex: 1; height: 1px; background: var(--border); }
-#auth-form { display: grid; gap: .55rem; }
-.modal p.auth-msg { margin: 0; font-size: 12.5px; color: var(--danger); min-height: 0; }
+#auth-form { display: grid; gap: .8rem; }
+.auth-field { display: grid; gap: .35rem; }
+.auth-field-head { display: flex; justify-content: space-between; align-items: baseline; }
+.auth-field label { font-size: 13px; font-weight: 500; }
+/* Styled by position, not type: "Show password" turns it into type=text. */
+.auth-field input {
+  width: 100%; height: 2.6rem; padding: .5rem .75rem; border-radius: .5rem;
+  border: 1px solid var(--border); background: var(--secondary); font-size: 14px; outline: none;
+}
+.auth-field input:focus { border-color: var(--primary); }
+.pw-wrap { position: relative; }
+.pw-wrap input { padding-right: 4rem; }
+.pw-toggle {
+  position: absolute; right: .35rem; top: 50%; transform: translateY(-50%);
+  padding: .25rem .5rem; border-radius: .4rem; font-size: 12px; font-weight: 500; color: var(--muted-fg);
+}
+.pw-toggle:hover { color: var(--foreground); background: color-mix(in oklch, var(--foreground) 6%, transparent); }
+.modal p.auth-hint { margin: 0; font-size: 12px; }
+.modal p.auth-msg {
+  margin: 0; padding: .5rem .65rem; border-radius: .5rem; font-size: 12.5px; line-height: 1.45;
+  color: var(--danger); background: color-mix(in oklch, var(--danger) 10%, transparent);
+}
+.modal p.auth-msg.ok { color: var(--primary); background: color-mix(in oklch, var(--primary) 10%, transparent); }
 .modal p.auth-msg:empty { display: none; }
-.auth-guest { width: 100%; margin-top: .55rem; }
-.auth-links { display: flex; justify-content: space-between; margin-top: .85rem; }
+.auth-submit { height: 2.75rem; margin-top: .15rem; }
+.auth-guest {
+  width: 100%; margin-top: .75rem; height: 2.6rem; border-radius: .6rem; font-size: 14px; font-weight: 500;
+  color: var(--muted-fg); transition: background .15s, color .15s;
+}
+.auth-guest:hover { background: var(--secondary); color: var(--foreground); }
+.auth-legal { margin-top: 1rem; font-size: 11.5px; color: var(--muted-fg); text-align: center; }
+.auth-legal a { color: inherit; }
 .btn-danger {
   padding: .5rem .95rem; border-radius: .5rem; background: var(--danger); color: #fff;
   font-size: 14px; font-weight: 500; transition: opacity .15s;
@@ -637,17 +712,34 @@ details[open] > summary .disclosure svg { transform: rotate(90deg); }
     </nav>
 
     <div class="account hidden" id="account">
-      <button class="btn-outline" id="signin-open" type="button">Sign in to save your history</button>
-      <div class="account-row hidden" id="account-row">
-        <span class="account-email" id="account-email"></span>
-        <span class="account-actions">
-          <button class="hist-clear" id="signout" type="button">Sign out</button>
-          <button class="hist-clear" id="delete-account" type="button">Delete account</button>
+      <div class="account-guest" id="account-guest">
+        <p>You're a guest. Your history stays on this device.</p>
+        <button class="btn-outline" id="signin-open" type="button">Sign in to keep it</button>
+      </div>
+      <div class="account-card hidden" id="account-row">
+        <span class="avatar-initial" id="account-avatar" aria-hidden="true"></span>
+        <span class="account-who">
+          <span class="account-name" id="account-name"></span>
+          <span class="account-email" id="account-email"></span>
         </span>
+        <button class="icon-btn" id="account-menu-btn" type="button" aria-label="Account options" aria-haspopup="menu" aria-expanded="false" aria-controls="account-menu">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="5" cy="12" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="19" cy="12" r="1.8"/></svg>
+        </button>
+        <div class="account-menu hidden" id="account-menu" role="menu">
+          <button role="menuitem" id="signout" type="button">Sign out</button>
+          <button role="menuitem" class="danger" id="delete-account" type="button">Delete account</button>
+        </div>
       </div>
     </div>
 
-    <div class="side-foot">Practice tool. Scores are an LLM's read of your answers, not a hiring decision. <a class="inline-link" href="/privacy.html">Privacy</a></div>
+    <div class="side-foot">
+      <nav class="foot-links" aria-label="About this site">
+        <a href="/about.html">About</a>
+        <a href="/privacy.html">Privacy</a>
+        <a href="https://github.com/Zeref538/callback-ai">Source</a>
+      </nav>
+      Practice tool. Scores are an AI's read of your answers, not a hiring decision.
+    </div>
   </aside>
 
   <div class="main">
@@ -809,25 +901,43 @@ details[open] > summary .disclosure svg { transform: rotate(90deg); }
 
 <!-- optional sign-in: Google or email + password, handled by Firebase -->
 <div class="modal-scrim hidden" id="auth-scrim">
-  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="auth-title">
-    <h3 id="auth-title">Sign in</h3>
-    <p id="auth-intro">Keep your interview history on any device. It's optional. You can keep practising as a guest. <a class="inline-link" href="/privacy.html">What's stored</a></p>
-    <button class="btn-outline auth-google" id="auth-google" type="button">
-      <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><path fill="#4285F4" d="M22.6 12.2c0-.8-.1-1.5-.2-2.2H12v4.2h5.9a5 5 0 0 1-2.2 3.3v2.7h3.6c2.1-1.9 3.3-4.8 3.3-8z"/><path fill="#34A853" d="M12 23c3 0 5.5-1 7.3-2.7l-3.6-2.8c-1 .7-2.2 1.1-3.7 1.1-2.9 0-5.3-1.9-6.2-4.5H2.1v2.8A11 11 0 0 0 12 23z"/><path fill="#FBBC05" d="M5.8 14.1a6.6 6.6 0 0 1 0-4.2V7.1H2.1a11 11 0 0 0 0 9.8z"/><path fill="#EA4335" d="M12 5.4c1.6 0 3.1.6 4.2 1.7l3.2-3.2A11 11 0 0 0 2.1 7.1l3.7 2.8C6.7 7.3 9.1 5.4 12 5.4z"/></svg>
+  <div class="modal auth-modal" role="dialog" aria-modal="true" aria-labelledby="auth-title">
+    <button class="icon-btn auth-close" id="auth-cancel" type="button" aria-label="Close">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg>
+    </button>
+    <div class="auth-brand"><span class="logo-mark" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 10 5 14l4 4"/><path d="M5 14h9a5 5 0 0 0 5-5V6"/></svg></span><span class="logo-text">callback<span>-ai</span></span></div>
+    <h3 id="auth-title">Welcome back</h3>
+    <p id="auth-intro">Sign in to keep your interview history on any device.</p>
+    <div class="auth-tabs" role="tablist" aria-label="Sign in or create an account">
+      <button role="tab" id="tab-in" type="button" aria-selected="true">Sign in</button>
+      <button role="tab" id="tab-up" type="button" aria-selected="false">Create account</button>
+    </div>
+    <button class="google-btn" id="auth-google" type="button">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="#4285F4" d="M22.6 12.2c0-.8-.1-1.5-.2-2.2H12v4.2h5.9a5 5 0 0 1-2.2 3.3v2.7h3.6c2.1-1.9 3.3-4.8 3.3-8z"/><path fill="#34A853" d="M12 23c3 0 5.5-1 7.3-2.7l-3.6-2.8c-1 .7-2.2 1.1-3.7 1.1-2.9 0-5.3-1.9-6.2-4.5H2.1v2.8A11 11 0 0 0 12 23z"/><path fill="#FBBC05" d="M5.8 14.1a6.6 6.6 0 0 1 0-4.2V7.1H2.1a11 11 0 0 0 0 9.8z"/><path fill="#EA4335" d="M12 5.4c1.6 0 3.1.6 4.2 1.7l3.2-3.2A11 11 0 0 0 2.1 7.1l3.7 2.8C6.7 7.3 9.1 5.4 12 5.4z"/></svg>
       Continue with Google
     </button>
-    <div class="auth-or"><span>or</span></div>
+    <div class="auth-or">or with email</div>
     <form id="auth-form">
-      <input type="email" id="auth-email" aria-label="Email" placeholder="Email" autocomplete="email" required>
-      <input type="password" id="auth-password" aria-label="Password" placeholder="Password (8+ characters)" autocomplete="current-password" minlength="8" required>
+      <div class="auth-field">
+        <label for="auth-email">Email</label>
+        <input type="email" id="auth-email" autocomplete="email" required>
+      </div>
+      <div class="auth-field">
+        <div class="auth-field-head">
+          <label for="auth-password">Password</label>
+          <button class="link-btn" id="auth-forgot" type="button">Forgot password?</button>
+        </div>
+        <div class="pw-wrap">
+          <input type="password" id="auth-password" autocomplete="current-password" minlength="8" required aria-describedby="auth-hint">
+          <button class="pw-toggle" id="auth-show" type="button" aria-label="Show password" aria-pressed="false">Show</button>
+        </div>
+        <p class="hint auth-hint hidden" id="auth-hint">At least 8 characters.</p>
+      </div>
       <p class="auth-msg" id="auth-msg" role="alert"></p>
-      <button class="btn-primary" id="auth-submit" type="submit">Sign in</button>
+      <button class="btn-primary auth-submit" id="auth-submit" type="submit">Sign in</button>
     </form>
-    <button class="btn-outline auth-guest hidden" id="auth-guest" type="button">Continue as guest</button>
-    <div class="auth-links">
-      <button class="link-btn" id="auth-switch" type="button">No account? Create one</button>
-      <button class="link-btn" id="auth-cancel" type="button">Not now</button>
-    </div>
+    <button class="auth-guest hidden" id="auth-guest" type="button">Continue as guest</button>
+    <p class="auth-legal">Optional. <a href="/privacy.html">What we store</a></p>
   </div>
 </div>
 
@@ -1438,38 +1548,50 @@ let authMode = "in";   // "in" = sign in, "up" = create account
 
 function renderAccount() {
   $("account").classList.toggle("hidden", !fb);
-  $("signin-open").classList.toggle("hidden", !!user);
+  $("account-guest").classList.toggle("hidden", !!user);
   $("account-row").classList.toggle("hidden", !user);
-  if (user) $("account-email").textContent = user.email || "Signed in";
+  if (!user) return;
+  const name = user.displayName || (user.email || "").split("@")[0] || "Signed in";
+  $("account-name").textContent = name;
+  $("account-email").textContent = user.email || "";
+  $("account-avatar").textContent = name.trim().charAt(0).toUpperCase();
 }
 
 function setAuthMode(mode) {
   authMode = mode;
-  $("auth-title").textContent = mode === "up" ? "Create an account" : "Sign in";
-  $("auth-submit").textContent = mode === "up" ? "Create account" : "Sign in";
-  $("auth-password").autocomplete = mode === "up" ? "new-password" : "current-password";
-  $("auth-switch").textContent = mode === "up" ? "Have an account? Sign in" : "No account? Create one";
-  $("auth-msg").textContent = "";
+  const up = mode === "up";
+  $("tab-in").setAttribute("aria-selected", String(!up));
+  $("tab-up").setAttribute("aria-selected", String(up));
+  $("auth-title").textContent = up ? "Create your account" : "Welcome back";
+  $("auth-submit").textContent = up ? "Create account" : "Sign in";
+  $("auth-password").autocomplete = up ? "new-password" : "current-password";
+  $("auth-forgot").classList.toggle("hidden", up);
+  $("auth-hint").classList.toggle("hidden", !up);
+  showAuthMsg("");
 }
-// welcome = the first-visit version: a clear "Continue as guest" choice
-// instead of the small "Not now" link.
+function showAuthMsg(text, ok = false) {
+  $("auth-msg").textContent = text;
+  $("auth-msg").classList.toggle("ok", ok);
+}
+
+// welcome = the first-visit version: a clear "Continue as guest" choice.
 const WELCOMED_KEY = "callback-ai-welcomed";
 const openAuth = (open, welcome = false) => {
   $("auth-scrim").classList.toggle("hidden", !open);
   if (!open) {
-    // Any way out (a choice, Escape, clicking outside) counts as answered.
+    // Any way out (a choice, Escape, the close button) counts as answered.
     try { localStorage.setItem(WELCOMED_KEY, "1"); } catch {}
     return;
   }
   setAuthMode("in");
   $("auth-guest").classList.toggle("hidden", !welcome);
   $("auth-cancel").classList.toggle("hidden", welcome);
-  $("auth-intro").firstChild.textContent = welcome
-    ? "Sign in to keep your interview history on any device, or carry on as a guest. If you sign in later, your guest history comes with you. "
-    : "Keep your interview history on any device. It's optional. You can keep practising as a guest. ";
-  // On first visit focus the first button, not the email box, so a phone
-  // doesn't throw its keyboard up over the choice.
-  (welcome ? $("auth-google") : $("auth-email")).focus();
+  $("auth-intro").textContent = welcome
+    ? "Sign in to keep your interview history on any device, or carry on as a guest. If you sign in later, your guest history comes with you."
+    : "Sign in to keep your interview history on any device.";
+  // Focus the first button, not the email box, so a phone doesn't throw its
+  // keyboard up over the choice.
+  $("auth-google").focus();
 };
 
 // Firebase's error codes, in words a person can act on.
@@ -1485,6 +1607,11 @@ const AUTH_ERRORS = {
   "auth/unauthorized-domain": "Sign-in isn't enabled for this web address yet.",
 };
 const authError = (err) => AUTH_ERRORS[err.code] || "Sign-in failed. Try again.";
+
+function closeAccountMenu() {
+  $("account-menu").classList.add("hidden");
+  $("account-menu-btn").setAttribute("aria-expanded", "false");
+}
 function signedIn() { openAuth(false); toast("Signed in. Your history is saved to your account."); }
 
 async function deleteAllInterviews() {
@@ -1523,9 +1650,36 @@ async function initAccounts() {
   $("auth-guest").onclick = () => openAuth(false);
   document.addEventListener("keydown", (e) => { if (e.key === "Escape" && !$("auth-scrim").classList.contains("hidden")) openAuth(false); });
   $("auth-scrim").onclick = (e) => { if (e.target === $("auth-scrim")) openAuth(false); };
-  $("auth-switch").onclick = () => setAuthMode(authMode === "up" ? "in" : "up");
-  $("signout").onclick = () => fb.signOut(fb.auth);
+  $("tab-in").onclick = () => setAuthMode("in");
+  $("tab-up").onclick = () => setAuthMode("up");
+  $("auth-show").onclick = () => {
+    const show = $("auth-password").type === "password";
+    $("auth-password").type = show ? "text" : "password";
+    $("auth-show").textContent = show ? "Hide" : "Show";
+    $("auth-show").setAttribute("aria-pressed", String(show));
+    $("auth-show").setAttribute("aria-label", show ? "Hide password" : "Show password");
+  };
+  $("auth-forgot").onclick = async () => {
+    const email = $("auth-email").value.trim();
+    if (!email) { showAuthMsg("Type your email above, then press Forgot password again."); $("auth-email").focus(); return; }
+    try {
+      await fb.sendPasswordResetEmail(fb.auth, email);
+      // Same message whether or not the account exists, so this can't be used
+      // to find out who has signed up.
+      showAuthMsg("If there's an account for that email, a reset link is on its way.", true);
+    } catch (err) { showAuthMsg(authError(err)); }
+  };
+  $("account-menu-btn").onclick = (e) => {
+    e.stopPropagation();
+    const open = $("account-menu").classList.toggle("hidden") === false;
+    $("account-menu-btn").setAttribute("aria-expanded", String(open));
+    if (open) $("signout").focus();
+  };
+  document.addEventListener("click", (e) => { if (!e.target.closest("#account-menu")) closeAccountMenu(); });
+  document.addEventListener("keydown", (e) => { if (e.key === "Escape" && !$("account-menu").classList.contains("hidden")) { closeAccountMenu(); $("account-menu-btn").focus(); } });
+  $("signout").onclick = () => { closeAccountMenu(); fb.signOut(fb.auth); };
   $("delete-account").onclick = async () => {
+    closeAccountMenu();
     const ok = await showConfirm({
       title: "Delete your account?",
       body: "This deletes your account and every interview saved to it. It can't be undone.",
@@ -1546,7 +1700,7 @@ async function initAccounts() {
   $("auth-google").onclick = async () => {
     // A pop-up, not a redirect: the page (and any interview in it) stays put.
     try { await fb.signInWithPopup(fb.auth, new fb.GoogleAuthProvider()); signedIn(); }
-    catch (err) { if (err.code !== "auth/popup-closed-by-user" && err.code !== "auth/cancelled-popup-request") $("auth-msg").textContent = authError(err); }
+    catch (err) { if (err.code !== "auth/popup-closed-by-user" && err.code !== "auth/cancelled-popup-request") showAuthMsg(authError(err)); }
   };
   $("auth-form").addEventListener("submit", async (e) => {
     e.preventDefault();
@@ -1556,7 +1710,7 @@ async function initAccounts() {
       await (authMode === "up" ? fb.createUserWithEmailAndPassword : fb.signInWithEmailAndPassword)(fb.auth, email, password);
       signedIn();
     } catch (err) {
-      $("auth-msg").textContent = authError(err);
+      showAuthMsg(authError(err));
     } finally {
       $("auth-submit").disabled = false;
     }
