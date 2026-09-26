@@ -44,7 +44,10 @@ MAX_SESSIONS = 200                   # in-process store; evict oldest so memory 
 def _remember_session(session_id: str, session: InterviewSession) -> None:
     SESSIONS[session_id] = session
     while len(SESSIONS) > MAX_SESSIONS:
-        SESSIONS.pop(next(iter(SESSIONS)))  # dict is insertion-ordered -> FIFO eviction
+        evicted = SESSIONS.pop(next(iter(SESSIONS)))  # dict is insertion-ordered -> FIFO eviction
+        # The transcript file on disk goes with it, so answers aren't kept after
+        # the session is gone and the disk can't fill up.
+        evicted.logger.path.unlink(missing_ok=True)
 
 
 @router.post("/extract")

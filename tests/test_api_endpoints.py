@@ -106,13 +106,22 @@ def test_trace_unknown_session_404():
     assert client.get("/api/sessions/nope/trace").status_code == 404
 
 
-def test_sessions_are_evicted_past_cap(monkeypatch):
+def test_sessions_are_evicted_past_cap_and_their_transcripts_deleted(monkeypatch, tmp_path):
+    from types import SimpleNamespace
+    from callback_ai.memory.session_store import SessionLogger
+
     monkeypatch.setattr(session_routes, "MAX_SESSIONS", 3)
     session_routes.SESSIONS.clear()
+    loggers = []
     for i in range(5):
-        session_routes._remember_session(f"s{i}", object())
+        logger = SessionLogger(session_id=f"s{i}", sessions_dir=tmp_path)
+        logger.log("answer", text=f"private answer {i}")
+        loggers.append(logger)
+        session_routes._remember_session(f"s{i}", SimpleNamespace(logger=logger))
     assert len(session_routes.SESSIONS) == 3
     assert "s0" not in session_routes.SESSIONS and "s4" in session_routes.SESSIONS
+    assert not loggers[0].path.exists() and not loggers[1].path.exists()
+    assert loggers[4].path.exists()
 
 
 # ---------- /extract ----------
