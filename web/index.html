@@ -271,8 +271,6 @@ ul { list-style: none; padding: 0; }
 .hist-item:hover { background: var(--secondary); color: var(--foreground); }
 .hist-title { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .hist-score { flex-shrink: 0; padding: 1px 6px; border-radius: 999px; font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: 600; font-variant-numeric: tabular-nums; }
-.side-foot { border-top: 1px solid var(--border); padding: .75rem 1.25rem .5rem; font-size: 11px; line-height: 1.5; color: var(--muted-fg); }
-.side-foot p { margin: 0; }
 
 /* ---------- main ---------- */
 .main { display: flex; min-width: 0; flex: 1; flex-direction: column; }
@@ -537,11 +535,10 @@ details[open] > summary .disclosure svg { transform: rotate(90deg); }
 .modal-actions { display: flex; justify-content: flex-end; gap: .5rem; }
 
 /* ---------- account (sidebar) ---------- */
-.account { padding: .25rem .5rem .6rem; }
+.account { position: relative; padding: .5rem; border-top: 1px solid var(--border); }
 .inline-link { color: var(--primary); text-decoration: underline; text-underline-offset: 2px; }
-.account-signed { position: relative; }
-.account-line { display: flex; align-items: center; gap: .6rem; width: 100%; padding: .45rem .5rem; border-radius: .6rem; text-align: left; }
-.account-btn { transition: background .15s; }
+.account-line { display: flex; align-items: center; gap: .35rem; }
+.account-btn { flex: 1; min-width: 0; display: flex; align-items: center; gap: .6rem; padding: .45rem .5rem; border-radius: .6rem; text-align: left; transition: background .15s; }
 .account-btn:hover, .account-btn[aria-expanded="true"] { background: var(--secondary); }
 .account-chevron { flex-shrink: 0; color: var(--muted-fg); }
 .account-signin { flex: none; padding: .35rem .7rem; font-size: 12px; font-weight: 500; }
@@ -560,14 +557,13 @@ details[open] > summary .disclosure svg { transform: rotate(90deg); }
   padding: .3rem; border: 1px solid var(--border); border-radius: .65rem; background: var(--card);
   box-shadow: 0 12px 32px -12px rgba(0,0,0,.45);
 }
-.account-menu button {
-  display: block; width: 100%; text-align: left; padding: .5rem .6rem; border-radius: .45rem; font-size: 13px;
+.account-menu a, .account-menu button {
+  display: block; color: inherit; text-decoration: none; width: 100%; text-align: left; padding: .5rem .6rem; border-radius: .45rem; font-size: 13px;
 }
-.account-menu button:hover, .account-menu button:focus-visible { background: var(--secondary); outline: none; }
+.account-menu a:hover, .account-menu a:focus-visible, .account-menu button:hover, .account-menu button:focus-visible { background: var(--secondary); outline: none; }
 .account-menu .danger { color: var(--danger); }
-.foot-links { display: flex; gap: 1rem; margin-bottom: .25rem; }
-.foot-links a { color: var(--foreground); text-decoration: none; font-size: 12px; font-weight: 500; }
-.foot-links a:hover { color: var(--primary); }
+.menu-sep { border: 0; border-top: 1px solid var(--border); margin: .3rem .2rem; }
+.menu-note { margin: .3rem 0 0; padding: .45rem .6rem .25rem; border-top: 1px solid var(--border); font-size: 11px; line-height: 1.45; color: var(--muted-fg); }
 
 /* ---------- sign-in window ---------- */
 .auth-modal { position: relative; max-width: 25rem; padding: 1.5rem 1.5rem 1.35rem; }
@@ -740,39 +736,28 @@ details[open] > summary .disclosure svg { transform: rotate(90deg); }
       </div>
     </nav>
 
-    <div class="side-foot">
-      <nav class="foot-links" aria-label="About this site">
-        <a href="/about.html">About</a>
-        <a href="/privacy.html">Privacy</a>
-        <a href="https://github.com/Zeref538/callback-ai">Source</a>
-      </nav>
-      <p>Practice only. Scores are an AI's read of your answers, not a hiring decision.</p>
-    </div>
-
-    <div class="account hidden" id="account">
-      <div class="account-line" id="account-guest">
-        <span class="avatar-initial guest" aria-hidden="true">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg>
-        </span>
-        <span class="account-who">
-          <span class="account-name">Guest</span>
-          <span class="account-email">Saved on this device</span>
-        </span>
-        <button class="btn-outline account-signin" id="signin-open" type="button">Sign in</button>
-      </div>
-      <div class="account-signed hidden" id="account-row">
-        <button class="account-line account-btn" id="account-menu-btn" type="button" aria-haspopup="menu" aria-expanded="false" aria-controls="account-menu">
-          <span class="avatar-initial" id="account-avatar" aria-hidden="true"></span>
+    <div class="account" id="account">
+      <div class="account-line">
+        <button class="account-btn" id="account-menu-btn" type="button" aria-haspopup="menu" aria-expanded="false" aria-controls="account-menu">
+          <span class="avatar-initial guest" id="account-avatar" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg></span>
           <span class="account-who">
-            <span class="account-name" id="account-name"></span>
-            <span class="account-email" id="account-email"></span>
+            <span class="account-name" id="account-name">Guest</span>
+            <span class="account-email" id="account-email">On this device</span>
           </span>
           <svg class="account-chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m7 15 5 5 5-5M7 9l5-5 5 5"/></svg>
         </button>
-        <div class="account-menu hidden" id="account-menu" role="menu">
+        <button class="btn-outline account-signin hidden" id="signin-open" type="button">Sign in</button>
+      </div>
+      <div class="account-menu hidden" id="account-menu" role="menu">
+        <a role="menuitem" href="/about.html">About</a>
+        <a role="menuitem" href="/privacy.html">Privacy</a>
+        <a role="menuitem" href="https://github.com/Zeref538/callback-ai">Source code</a>
+        <div class="signed-only hidden" role="none">
+          <hr class="menu-sep">
           <button role="menuitem" id="signout" type="button">Sign out</button>
           <button role="menuitem" class="danger" id="delete-account" type="button">Delete account</button>
         </div>
+        <p class="menu-note">Practice only. Scores are an AI's read of your answers, not a hiring decision.</p>
       </div>
     </div>
   </aside>
@@ -1584,11 +1569,17 @@ let fb = null;     // the loaded Firebase functions plus { auth, db }
 let user = null;
 let authMode = "in";   // "in" = sign in, "up" = create account
 
+const GUEST_ICON = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg>';
 function renderAccount() {
-  $("account").classList.toggle("hidden", !fb);
-  $("account-guest").classList.toggle("hidden", !!user);
-  $("account-row").classList.toggle("hidden", !user);
-  if (!user) return;
+  $("signin-open").classList.toggle("hidden", !fb || !!user);
+  document.querySelector(".signed-only").classList.toggle("hidden", !user);
+  $("account-avatar").classList.toggle("guest", !user);
+  if (!user) {
+    $("account-name").textContent = "Guest";
+    $("account-email").textContent = "On this device";
+    $("account-avatar").innerHTML = GUEST_ICON;
+    return;
+  }
   const name = user.displayName || (user.email || "").split("@")[0] || "Signed in";
   $("account-name").textContent = name;
   $("account-email").textContent = user.email || "";
@@ -1650,6 +1641,14 @@ function closeAccountMenu() {
   $("account-menu").classList.add("hidden");
   $("account-menu-btn").setAttribute("aria-expanded", "false");
 }
+$("account-menu-btn").onclick = (e) => {
+  e.stopPropagation();
+  const open = $("account-menu").classList.toggle("hidden") === false;
+  $("account-menu-btn").setAttribute("aria-expanded", String(open));
+  if (open) $("account-menu").querySelector("[role=menuitem]").focus();
+};
+document.addEventListener("click", (e) => { if (!e.target.closest("#account-menu")) closeAccountMenu(); });
+document.addEventListener("keydown", (e) => { if (e.key === "Escape" && !$("account-menu").classList.contains("hidden")) { closeAccountMenu(); $("account-menu-btn").focus(); } });
 function signedIn() { openAuth(false); toast("Signed in. Your history is saved to your account."); }
 
 async function deleteAllInterviews() {
@@ -1707,14 +1706,6 @@ async function initAccounts() {
       showAuthMsg("If there's an account for that email, a reset link is on its way.", true);
     } catch (err) { showAuthMsg(authError(err)); }
   };
-  $("account-menu-btn").onclick = (e) => {
-    e.stopPropagation();
-    const open = $("account-menu").classList.toggle("hidden") === false;
-    $("account-menu-btn").setAttribute("aria-expanded", String(open));
-    if (open) $("signout").focus();
-  };
-  document.addEventListener("click", (e) => { if (!e.target.closest("#account-menu")) closeAccountMenu(); });
-  document.addEventListener("keydown", (e) => { if (e.key === "Escape" && !$("account-menu").classList.contains("hidden")) { closeAccountMenu(); $("account-menu-btn").focus(); } });
   $("signout").onclick = () => { closeAccountMenu(); fb.signOut(fb.auth); };
   $("delete-account").onclick = async () => {
     closeAccountMenu();
