@@ -1421,7 +1421,14 @@ $("clear-history").onclick = async () => {
 // Firebase handles sign-in and stores history. The config below is public by
 // design: the Firestore security rules (firestore.rules) are what keep each
 // person's interviews private. Left null, the app runs guest-only.
-const FIREBASE_CONFIG = null;   // paste the web app's firebaseConfig object here
+// Only the fields sign-in and Firestore need. measurementId is left out on
+// purpose: it is for Google Analytics, which this app doesn't use.
+const FIREBASE_CONFIG = {
+  apiKey: "AIzaSyBurRJncrSnTUUpsIjdgiYKILwMOTOjMII",
+  authDomain: "callback-ai-95df3.firebaseapp.com",
+  projectId: "callback-ai-95df3",
+  appId: "1:84771268508:web:ff8e0694c9c74442d88a59",
+};
 const FIREBASE_SDK = "https://www.gstatic.com/firebasejs/12.19.0";   // pinned so a release can't change the page under us
 let fb = null;     // the loaded Firebase functions plus { auth, db }
 let user = null;
