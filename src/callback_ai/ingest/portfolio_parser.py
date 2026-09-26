@@ -7,7 +7,10 @@ best-effort: JS-rendered single-page apps have no server-side text to read,
 and those fail gracefully so a session continues on resume + role.
 """
 from callback_ai.llm.json_parse import parse_json_response
+import ipaddress
+import socket
 from html.parser import HTMLParser
+from urllib.parse import urljoin, urlsplit
 
 import httpx
 
@@ -60,15 +63,57 @@ class _TextExtractor(HTMLParser):
             self.chunks.append(text)
 
 
+MAX_PAGE_BYTES = 2_000_000   # a portfolio page, not a download; stops a huge response eating memory
+MAX_REDIRECTS = 5
+
+
+def _check_public_url(url: str) -> None:
+    """The URL comes from a stranger and the server fetches it, so refuse
+    anything that isn't the public internet: localhost, private networks,
+    cloud metadata addresses, non-http schemes. Without this the server can be
+    used to reach machines only it can see (SSRF).
+    ponytail: checks the address before connecting, so a DNS answer that
+    changes between check and connect (rebinding) slips past; pin the resolved
+    IP in the connection if this ever guards anything sensitive."""
+    parts = urlsplit(url)
+    if parts.scheme not in ("http", "https") or not parts.hostname:
+        raise PortfolioFetchError(f"not an http(s) link: {url}")
+    try:
+        infos = socket.getaddrinfo(parts.hostname, parts.port or (443 if parts.scheme == "https" else 80))
+    except (socket.gaierror, UnicodeError) as e:
+        raise PortfolioFetchError(f"could not resolve {parts.hostname}") from e
+    for info in infos:
+        ip = ipaddress.ip_address(info[4][0].split("%")[0])
+        if ip.version == 6 and ip.ipv4_mapped:
+            ip = ip.ipv4_mapped
+        if not ip.is_global:
+            raise PortfolioFetchError(f"{parts.hostname} is not a public address")
+
+
 def fetch_portfolio_text(url: str) -> str:
     try:
-        resp = httpx.get(url, timeout=settings.request_timeout_s, follow_redirects=True)
-        resp.raise_for_status()
+        # Redirects are followed by hand so every hop gets the same check.
+        for _ in range(MAX_REDIRECTS + 1):
+            _check_public_url(url)
+            with httpx.stream("GET", url, timeout=settings.request_timeout_s, follow_redirects=False) as resp:
+                if resp.is_redirect:
+                    url = urljoin(url, resp.headers["location"])
+                    continue
+                resp.raise_for_status()
+                body = b""
+                for chunk in resp.iter_bytes():
+                    body += chunk
+                    if len(body) > MAX_PAGE_BYTES:
+                        break
+                html = body[:MAX_PAGE_BYTES].decode(resp.charset_encoding or "utf-8", errors="replace")
+                break
+        else:
+            raise PortfolioFetchError(f"too many redirects from {url}")
     except httpx.HTTPError as e:
         raise PortfolioFetchError(f"could not fetch {url}: {e}") from e
 
     extractor = _TextExtractor()
-    extractor.feed(resp.text)
+    extractor.feed(html)
 
     header = "\n".join(p for p in (extractor.title, extractor.meta_description) if p)
     body = "\n".join(extractor.chunks)
