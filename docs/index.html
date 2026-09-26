@@ -1,0 +1,1355 @@
+<!doctype html>
+<html lang="en" data-view="plain">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>callback-ai: An Interviewer That Asks the Second Question</title>
+<meta name="description" content="Case study: an interview practice agent that follows up on vague answers, spends a 12-question budget where it knows least, and only keeps scores it can back with a verbatim quote. Measured twice on the live model.">
+<link rel="icon" href="https://callback-ai.netlify.app/favicon.svg" type="image/svg+xml">
+<style>
+  /* Self-hosted (SIL OFL, fonts/OFL.txt): no request to Google Fonts. */
+  @font-face { font-family: "Schibsted Grotesk"; font-weight: 400; font-display: swap;
+    src: url("fonts/schibsted-grotesk-latin-400-normal.woff2") format("woff2"); }
+  @font-face { font-family: "Schibsted Grotesk"; font-weight: 500; font-display: swap;
+    src: url("fonts/schibsted-grotesk-latin-500-normal.woff2") format("woff2"); }
+  @font-face { font-family: "Newsreader"; font-style: italic; font-weight: 400; font-display: swap;
+    src: url("fonts/newsreader-latin-400-italic.woff2") format("woff2"); }
+  @font-face { font-family: "Schibsted Grotesk"; font-weight: 600; font-display: swap;
+    src: url("fonts/schibsted-grotesk-latin-600-normal.woff2") format("woff2"); }
+  @font-face { font-family: "Sora"; font-weight: 700; font-display: swap;
+    src: url("fonts/sora-latin-700-normal.woff2") format("woff2"); } /* logo only, SIL OFL */
+  @font-face { font-family: "Schibsted Grotesk"; font-weight: 700; font-display: swap;
+    src: url("fonts/schibsted-grotesk-latin-700-normal.woff2") format("woff2"); }
+  /* ============================================================
+     CALLBACK-AI: visual identity
+     Stone neutrals plus one project colour, green, the same green the
+     app uses. Green marks the agent's decisions: data, the follow-up
+     verdict, step numbers, the glow. Grey is the comparison.
+     ============================================================ */
+  :root {
+    color-scheme: light;
+    --paper: #f5f5f4; --card: #fafaf9; --sunk: #e7e5e4;
+    --ink: #1c1917; --ink-2: #57534e; --ink-3: #6b645f;
+    --rule: #d6d3d1; --rule-2: #a8a29e;
+    --proj: #00654f; --tide: #808080; --switch: #000000;
+    --ash: #00654f; --good: #000000; --track: #ececec;
+    --proj-w: #d7ece5; --tide-w: #ececec; --sw-w: #e5e5e5;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:where(:not([data-theme="light"])) {
+      color-scheme: dark;
+    --paper: #000000; --card: #141414; --sunk: #1c1c1c;
+    --ink: #ffffff; --ink-2: #c8c8c8; --ink-3: #8f8f8f;
+    --rule: #262626; --rule-2: #3a3a3a;
+    --proj: #34d399; --tide: #8a8a8a; --switch: #ffffff;
+    --ash: #34d399; --good: #ffffff; --track: #222222;
+    --proj-w: #0d3527; --tide-w: #262626; --sw-w: #262626;
+    }
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --paper: #000000; --card: #141414; --sunk: #1c1c1c;
+    --ink: #ffffff; --ink-2: #c8c8c8; --ink-3: #8f8f8f;
+    --rule: #262626; --rule-2: #3a3a3a;
+    --proj: #34d399; --tide: #8a8a8a; --switch: #ffffff;
+    --ash: #34d399; --good: #ffffff; --track: #222222;
+    --proj-w: #0d3527; --tide-w: #262626; --sw-w: #262626;
+  }
+
+  :root {
+    --sans: "Schibsted Grotesk", system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --mono: ui-monospace, "Cascadia Mono", "SF Mono", Menlo, Consolas, monospace;
+  }
+
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  @media (prefers-reduced-motion: reduce) {
+    html { scroll-behavior: auto; }
+    *, *::before, *::after { animation-duration: .001ms !important; transition-duration: .001ms !important; }
+  }
+  body {
+    margin: 0; background: var(--paper); color: var(--ink);
+    font-family: var(--sans); font-size: 16.5px; line-height: 1.66;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 800px; margin: 0 auto; padding: 0 26px; }
+  @media (max-width: 560px) { .wrap { padding: 0 17px; } }
+
+  a { color: var(--switch); text-underline-offset: 2px; }
+  a:focus-visible, button:focus-visible, [contenteditable]:focus-visible {
+    outline: 2px solid var(--switch); outline-offset: 2px; border-radius: 3px;
+  }
+
+  /* ---------------- sticky bar ---------------- */
+  .bar {
+    position: sticky; top: 0; z-index: 40;
+    background: color-mix(in srgb, var(--paper) 88%, transparent);
+    backdrop-filter: blur(10px);
+    border-bottom: 1px solid var(--rule);
+  }
+  .bar .wrap { display: flex; align-items: center; gap: 12px; height: 54px; }
+  .brand {
+    font-weight: 800; letter-spacing: -.02em; margin-right: auto;
+    font-size: 15.5px;
+  }
+  .brand span { color: var(--switch); }
+  .seg {
+    display: inline-flex; border: 1px solid var(--rule-2); border-radius: 999px;
+    overflow: hidden; background: var(--card);
+  }
+  .seg button {
+    font: inherit; font-size: 12.5px; font-weight: 600;
+    padding: 5px 12px; border: 0; background: transparent; color: var(--ink-3);
+    cursor: pointer; white-space: nowrap;
+  }
+  .seg button[aria-pressed="true"] { background: var(--ink); color: var(--paper); }
+  .iconbtn {
+    font: inherit; width: 32px; height: 32px; border-radius: 999px;
+    border: 1px solid var(--rule-2); background: var(--card); color: var(--ink-2);
+    cursor: pointer; line-height: 1;
+  }
+  @media (max-width: 480px) { .seg button { padding: 5px 9px; font-size: 11.5px; } }
+
+  /* ---------------- type ---------------- */
+  h1 {
+    font-size: clamp(30px, 6.2vw, 47px); line-height: 1.06;
+    letter-spacing: -.033em; font-weight: 830; margin: 0 0 14px;
+  }
+  h2 {
+    font-size: clamp(21px, 3.4vw, 27px); line-height: 1.2;
+    letter-spacing: -.022em; font-weight: 780; margin: 0 0 16px;
+  }
+  h3 {
+    font-size: 16px; font-weight: 730; letter-spacing: -.008em;
+    margin: 32px 0 8px;
+  }
+  p { margin: 0 0 16px; }
+  .kicker {
+    font-family: var(--mono); font-size: 11px; font-weight: 600;
+    letter-spacing: .15em; text-transform: uppercase; color: var(--ink-3);
+    margin: 0 0 8px;
+  }
+  .lede { font-size: 18.5px; color: var(--ink-2); }
+  section { padding: 64px 0; border-top: 1px solid var(--rule); }
+  @media (max-width: 620px) { section { padding: 48px 0; } }
+  section:first-of-type { border-top: 0; }
+  .muted { color: var(--ink-3); }
+  .small { font-size: 14px; }
+  b, strong { font-weight: 700; }
+
+  /* ---------------- hero ---------------- */
+  .hero { padding: 64px 0 48px; }
+
+  /* ---------------- the scorer widget ---------------- */
+  .scorer {
+    background: var(--card); border: 2px solid var(--ink);
+    border-radius: 13px; overflow: hidden;
+  }
+  .chips { margin-left: auto; display: flex; gap: 6px; flex-wrap: wrap; }
+  .chip {
+    font: inherit; font-size: 11.5px; font-weight: 600; cursor: pointer;
+    padding: 3px 9px; border-radius: 999px;
+    border: 1px solid var(--rule-2); background: var(--card); color: var(--ink-2);
+  }
+  .chip:hover { border-color: var(--switch); color: var(--switch); }
+  .bar-track { height: 7px; background: var(--track); border-radius: 999px; overflow: hidden; }
+  .bar-fill { height: 100%; width: 0; border-radius: 999px; transition: width .18s ease; }
+  .verdict {
+    font-family: var(--mono); font-size: 12px; font-weight: 700;
+    padding: 7px 13px; border-radius: 999px; text-align: center; white-space: nowrap;
+  }
+
+  /* ---------------- blocks ---------------- */
+  .card {
+    background: var(--card); border: 1px solid var(--rule-2);
+    border-radius: 12px; padding: 16px 24px; margin: 24px 0;
+  }
+  .note {
+    border-left: 3px solid var(--switch); background: var(--card);
+    padding: 16px 24px; margin: 24px 0; border-radius: 0 8px 8px 0;
+  }
+  .note.warn { border-left-color: var(--ash); }
+  .note .kicker { color: var(--switch); }
+  .note.warn .kicker { color: var(--ash); }
+
+  table { width: 100%; border-collapse: collapse; margin: 24px 0; font-size: 14.5px; }
+  th, td { text-align: left; padding: 9px 10px; border-bottom: 1px solid var(--rule); }
+  th { font-family: var(--mono); font-size: 11px; letter-spacing: .08em;
+       text-transform: uppercase; color: var(--ink-3); font-weight: 600; }
+  td.num, th.num { text-align: right; font-family: var(--mono); font-variant-numeric: tabular-nums; }
+  .tw { overflow-x: auto; }
+
+  code {
+    font-family: var(--mono); font-size: .88em;
+    background: var(--sunk); padding: 1.5px 5px; border-radius: 4px;
+  }
+  pre {
+    font-family: var(--mono); font-size: 13px; line-height: 1.6;
+    background: var(--card); border: 1px solid var(--rule-2);
+    border-radius: 10px; padding: 14px 16px; overflow-x: auto;
+  }
+  pre code { background: none; padding: 0; }
+
+  blockquote {
+    margin: 0 0 16px; padding: 12px 16px; border-radius: 0 8px 8px 0;
+    background: var(--card); border-left: 3px solid var(--rule-2);
+    font-size: 15.5px;
+  }
+
+
+  figure { margin: 32px 0; }
+  figcaption { font-size: 13px; color: var(--ink-3); margin-top: 9px; }
+  svg { display: block; max-width: 100%; height: auto; }
+  .legend {
+    display: flex; gap: 16px; flex-wrap: wrap; font-size: 12.5px;
+    font-family: var(--mono); color: var(--ink-3); margin-bottom: 8px;
+  }
+  .legend i { width: 11px; height: 3px; border-radius: 2px; display: inline-block;
+              vertical-align: middle; margin-right: 6px; }
+
+  ul { margin: 0 0 15px; padding-left: 21px; }
+  li { margin-bottom: 7px; }
+
+  footer { padding: 40px 0 64px; border-top: 1px solid var(--rule); color: var(--ink-3); font-size: 14px; }
+
+  /* ---------------- plain / technical ---------------- */
+  [data-mode] { display: none; }
+  html[data-view="plain"] [data-mode="plain"],
+  html[data-view="expert"] [data-mode="expert"] { display: block; }
+  html[data-view="plain"] span[data-mode="plain"],
+  html[data-view="expert"] span[data-mode="expert"] { display: inline; }
+  html[data-view="plain"] li[data-mode="plain"],
+  html[data-view="expert"] li[data-mode="expert"] { display: list-item; }
+
+
+  .kicker {
+    font-family: var(--sans); font-size: 13.5px; font-weight: 600;
+    letter-spacing: 0; text-transform: none; color: var(--proj);
+  }
+
+
+  .headline-num {
+    display: flex; align-items: baseline; gap: 22px; flex-wrap: wrap;
+    margin: 24px 0 32px;
+  }
+  .headline-num .x {
+    font-size: clamp(60px, 9vw, 104px); font-weight: 700; line-height: .85;
+    letter-spacing: -.05em; color: var(--proj);
+  }
+  .headline-num p { font-size: 18px; color: var(--ink-2); max-width: 30ch; margin: 0; }
+
+  /* Failures: hanging numerals, because it is a counted list. */
+  #broke { counter-reset: fail; }
+  #broke h3 { counter-increment: fail; position: relative; margin-top: 38px; }
+  #broke h3::before {
+    content: counter(fail); position: absolute; right: calc(100% + 18px); top: -.28em;
+    font-size: 40px; font-weight: 700; line-height: 1; color: var(--ash); opacity: .85;
+  }
+  @media (max-width: 960px) {
+    #broke h3::before { position: static; display: block; font-size: 30px; margin-bottom: 4px; }
+  }
+
+
+  /* ---------------- brand mark, stats, about, footer ---------------- */
+  .mark { font-family: "Sora", var(--sans); font-weight: 700; font-size: 17px;
+          color: var(--ink); text-decoration: none; letter-spacing: -.01em; }
+  .mark span { color: var(--proj); } /* the dot takes each project's colour */
+  .brand { margin-right: auto; font-weight: 700; }
+  .brand .sep { color: var(--rule-2); margin: 0 6px 0 2px; font-weight: 400; }
+
+
+
+  .site-foot { border-top: 2px solid var(--ink); padding: 48px 0 32px; margin-top: 0; }
+  .site-foot a { color: var(--ink); }
+  .site-foot code { background: transparent; color: inherit; padding: 0; }
+  .foot-grid { max-width: 1040px; display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 32px; }
+  .foot-grid nav a { display: block; margin: 0 0 8px; text-decoration: none; opacity: .85; }
+  .foot-grid nav a:hover { opacity: 1; text-decoration: underline; }
+  .foot-h { font-weight: 700; margin-bottom: 12px; }
+  .foot-base { max-width: 1040px; margin-top: 36px; padding-top: 18px; opacity: .6;
+               border-top: 1px solid var(--rule); }
+  @media (max-width: 700px) { .foot-grid { grid-template-columns: 1fr 1fr; }
+                              .foot-grid > div:first-child { grid-column: 1 / -1; } }
+
+  /* ---------------- console layout (after LiquidAI's LFM2.5 demo) ---------------- */
+  :root { --grid: rgba(28, 25, 23, .045); --serif: "Newsreader", Georgia, serif; }
+  :root[data-theme="dark"] { --grid: rgba(255, 255, 255, .04); }
+  @media (prefers-color-scheme: dark) {
+    :root:where(:not([data-theme="light"])) { --grid: rgba(255, 255, 255, .04); }
+  }
+  body {
+    background-image: linear-gradient(var(--grid) 1px, transparent 1px),
+                      linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+    background-size: 40px 40px;
+  }
+
+  h1, h2, .display { font-weight: 500; letter-spacing: -.05em; }
+  h2 { font-size: clamp(28px, 4vw, 40px); line-height: 1.02; }
+  .it { font-family: var(--serif); font-style: italic; font-weight: 400; letter-spacing: 0; }
+  .caps { font-size: 12px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase;
+          color: var(--ink-3); margin: 0; }
+  .kicker { font-size: 12px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase;
+            color: var(--ink-3); display: flex; align-items: center; gap: 12px; }
+  .kicker::before { content: ""; width: 32px; height: 1px; background: var(--ink); }
+
+  .hero { padding: 32px 24px 64px; }
+  .console { max-width: 1360px; margin: 0 auto; border: 1px solid var(--ink); border-radius: 16px;
+             background: color-mix(in srgb, var(--paper) 88%, transparent); overflow: hidden; }
+  .console-head { display: flex; align-items: center; gap: 12px; padding: 20px 32px;
+                  border-bottom: 1px solid var(--rule); }
+  .step-no { display: grid; place-items: center; width: 28px; height: 28px; border-radius: 999px;
+             border: 1px solid var(--rule-2); font-size: 11px; font-weight: 700; color: var(--ink-3); }
+  .console-body { display: grid; grid-template-columns: minmax(300px, 1fr) 2fr; }
+  .console-side { padding: 32px; border-right: 1px solid var(--rule); display: flex; flex-direction: column; }
+  .console-main { padding: 32px; min-width: 0; }
+  .lined { display: flex; align-items: center; gap: 12px; color: var(--ink); }
+  .lined::before { content: ""; width: 32px; height: 1px; background: var(--ink); }
+  .console h1 { font-size: clamp(56px, 7vw, 80px); line-height: .86; margin: 32px 0 12px; }
+  .spec { font-size: 24px; margin: 0 0 24px; }
+  .side-lede { font-size: 17px; color: var(--ink-2); margin-bottom: 24px; }
+  .specs { margin: 0 0 32px; border-top: 1px solid var(--rule); }
+  .specs div { display: flex; justify-content: space-between; gap: 16px; padding: 12px 0;
+               border-bottom: 1px solid var(--rule); font-size: 14px; }
+  .specs dt { color: var(--ink-3); }
+  .specs dd { margin: 0; font-weight: 700; text-align: right; }
+  .side-cta { margin-top: auto; }
+  .pill { display: inline-flex; align-items: center; min-height: 48px; padding: 0 24px;
+          border-radius: 999px; background: var(--ink); color: var(--paper); font-weight: 700;
+          letter-spacing: -.01em; text-decoration: none; }
+  .pill:hover { opacity: .88; }
+  .side-cta p { margin: 12px 0 0; }
+  .display { font-size: clamp(28px, 3.4vw, 44px); line-height: 1; margin: 12px 0 32px; max-width: 18ch; }
+  .display .it { letter-spacing: -.01em; }
+  .steps { list-style: none; padding: 0; margin: 0 0 32px; display: grid; grid-template-columns: repeat(3, 1fr);
+           border: 1px solid var(--rule-2); border-radius: 12px; overflow: hidden; }
+  .steps li { margin: 0; padding: 20px; font-size: 14px; color: var(--ink-3); line-height: 1.55; position: relative; }
+  .steps li + li { border-left: 1px solid var(--rule-2); }
+  .steps .it { position: absolute; top: 16px; right: 20px; color: var(--ink-3); }
+  .steps b { display: block; margin: 24px 0 6px; font-size: 17px; color: var(--ink); }
+  .try { display: flex; align-items: baseline; gap: 12px; margin-bottom: 12px; }
+  .try .it { text-transform: none; font-size: 16px; }
+  .console .scorer { border: 1px solid var(--rule-2); border-radius: 12px; }
+
+  .closing { border-top: 0; padding: 96px 24px 64px; max-width: 1360px; margin: 0 auto; }
+  .display.closing-line { font-size: clamp(36px, 4.8vw, 60px); max-width: 16ch; margin: 0; }
+  .foot-strip { display: flex; justify-content: space-between; gap: 16px; flex-wrap: wrap;
+                max-width: 1360px; margin: 40px auto 0; padding: 20px 24px 0; border-top: 1px solid var(--rule); }
+  .rail a span { font-family: var(--serif); font-style: italic; font-weight: 400; font-size: 15px; }
+
+  @media (max-width: 900px) {
+    .console-body { grid-template-columns: 1fr; }
+    .console-side { border-right: 0; border-bottom: 1px solid var(--rule); }
+    .steps { grid-template-columns: 1fr; }
+    .steps li + li { border-left: 0; border-top: 1px solid var(--rule-2); }
+    .console-head, .console-side, .console-main { padding-left: 20px; padding-right: 20px; }
+    .hero { padding: 16px 12px 48px; }
+  }
+  .bar .wrap { max-width: 1408px; padding: 0 57px; }
+  @media (max-width: 900px) { .bar .wrap { padding: 0 32px; } }
+  .foot-grid, .foot-base { max-width: 1408px; padding-left: 57px; padding-right: 57px; }
+  .foot-strip { max-width: 1408px; padding-left: 57px; padding-right: 57px; }
+  @media (max-width: 900px) { .foot-grid, .foot-base, .foot-strip { padding-left: 20px; padding-right: 20px; } }
+  @media (max-width: 560px) {
+    .bar .brand { display: none; }
+    .bar .wrap { padding: 0 12px; gap: 8px; }
+  }
+
+  /* ---------------- every section is a console panel ---------------- */
+  .panel-sec { padding: 0 0 24px; border-top: 0; }
+  .panel-sec .console-side { display: block; }
+  .side-stick { position: sticky; top: 88px; }
+  .panel-sec .console-side h2 { font-size: clamp(28px, 3vw, 40px); line-height: 1.02; margin: 0; }
+  .console-main > p, .console-main > ul, .console-main > h3, .console-main > .note,
+  .console-main > blockquote { max-width: 68ch; }
+  .console-main > h3:first-child, .console-main > p:first-child { margin-top: 0; }
+
+  /* cards: notes, quotes, tables and code share the steps' bordered look */
+  .note, blockquote, .card, pre, .tw {
+    background: var(--card); border: 1px solid var(--rule-2); border-radius: 12px; }
+  .note { border-left: 1px solid var(--rule-2); padding: 20px 24px; }
+  blockquote { border-left: 3px solid var(--rule-2); border-radius: 0 12px 12px 0; }
+  .tw { padding: 4px 16px; }
+  .tw table { margin: 0; }
+
+  #broke h3::before { position: static; display: block; margin-bottom: 4px; font-size: 32px;
+    font-family: var(--serif); font-style: italic; font-weight: 400; color: var(--ink-3); }
+
+  @media (max-width: 900px) {
+    .panel-sec { padding: 0 12px 16px; }
+    .side-stick { position: static; }
+  }
+
+  /* ---------------- two columns: contents rail | panels ---------------- */
+  .page-grid { max-width: 1408px; margin: 0 auto; padding: 0 24px; }
+  @media (min-width: 1100px) {
+    .page-grid { display: grid; grid-template-columns: 200px minmax(0, 1fr); gap: 32px; }
+    .page-grid > .rail {
+      display: block; position: sticky; top: 88px; align-self: start; left: auto; width: auto;
+      opacity: 1 !important; pointer-events: auto !important; font-size: 13px; line-height: 1.35;
+    }
+    .page-grid > .rail a { display: flex; gap: 12px; padding: 8px 0 8px 14px; color: var(--ink-3);
+      text-decoration: none; border-left: 1px solid var(--rule); }
+    .page-grid > .rail a:hover { color: var(--ink); }
+    .page-grid > .rail a[aria-current="true"] { color: var(--ink); font-weight: 600;
+      border-left: 2px solid var(--ink); padding-left: 13px; }
+    .page-grid > .rail a span { min-width: 1.6em; }
+  }
+  .rail-h { margin: 0 0 12px 14px; }
+  @media (max-width: 1099px) { .page-grid > .rail { display: none; } .page-grid { padding: 0 12px; } }
+
+  /* background: fine dots instead of grid lines */
+  body { background-image: radial-gradient(var(--dot) 1px, transparent 1.2px); background-size: 22px 22px; }
+  :root { --dot: rgba(28, 25, 23, .13); }
+  :root[data-theme="dark"] { --dot: rgba(255, 255, 255, .09); }
+  @media (prefers-color-scheme: dark) { :root:where(:not([data-theme="light"])) { --dot: rgba(255, 255, 255, .09); } }
+
+  /* inside each section card: title band on top, content gets the full width */
+  .panel-sec .console-body { display: block; }
+  .panel-sec .console-side { border-right: 0; border-bottom: 1px solid var(--rule); padding: 40px 48px 32px; }
+  .panel-sec .side-stick { position: static; }
+  .panel-sec .console-side h2 { font-size: clamp(26px, 2.8vw, 38px); max-width: 28ch; }
+  .panel-sec .console-main { padding: 40px 48px 48px; }
+  @media (max-width: 900px) {
+    .panel-sec .console-side { padding: 24px 20px; }
+    .panel-sec .console-main { padding: 24px 20px 32px; }
+  }
+
+
+  /* hero: open on the page, no frame. Oversized title, statement beside the story, then the live filter. */
+  .hero { max-width: 1408px; margin: 0 auto; padding: 48px 24px 64px; }
+  .hero .console { max-width: none; }
+  .hero .console-body { padding: 48px 48px 48px; }
+  .hero .console-head { display: none; }
+  .hero .console-body { display: grid; grid-template-columns: minmax(0, 7fr) minmax(0, 5fr); column-gap: 64px;
+    align-items: start;
+    grid-template-areas: "kick spec" "title title" "show lede" "steps steps" "try try" "tool specs" "tool cta"; }
+  .hero .console-side, .hero .console-main { display: contents; }
+  .hero .console-main > .caps:first-child { display: none; }
+  .hero .hero-kick { grid-area: kick; display: flex; flex-wrap: wrap; align-items: center; gap: 8px 20px; }
+  .hero .spec { grid-area: spec; justify-self: end; margin: 0; }
+  .hero h1 { grid-area: title; font-size: clamp(72px, 10vw, 144px); line-height: .82; letter-spacing: -.07em;
+    margin: 24px 0 40px; }
+  .hero .display { grid-area: show; margin: 0; max-width: 16ch; }
+  .hero .side-lede { grid-area: lede; max-width: none; margin: 8px 0 0; }
+  .hero .steps { grid-area: steps; margin: 48px 0; border: 0; border-top: 1px solid var(--ink);
+    border-bottom: 1px solid var(--rule); border-radius: 0; background: none; }
+  .hero .steps li { padding: 20px 24px 24px 0; }
+  .hero .steps li + li { border-left: 0; padding-left: 24px; }
+  .hero .steps .it { position: static; font-size: 28px; color: var(--proj); }
+  .hero .steps b { margin: 8px 0 4px; }
+  .hero .try { grid-area: try; }
+  .hero .scorer { grid-area: tool; }
+  .hero .specs { grid-area: specs; margin: 0 0 32px; }
+  .hero .side-cta { grid-area: cta; margin: 0; }
+  @media (max-width: 900px) {
+    .hero { padding: 16px 12px 48px; }
+    .hero .console-body { padding: 24px 20px 32px; }
+    .hero .console-body { grid-template-columns: minmax(0, 1fr);
+      grid-template-areas: "kick" "spec" "title" "show" "lede" "steps" "specs" "cta" "try" "tool"; }
+    .hero .spec { justify-self: start; margin-top: 8px; }
+    .hero .side-lede { margin-top: 24px; }
+    .hero .steps li, .hero .steps li + li { padding: 16px 0; }
+    .hero .side-cta { margin-bottom: 40px; }
+  }
+
+  /* footer: a plain full-width band, not a card */
+  .closing { max-width: 1408px; margin: 0 auto; padding: 96px 24px 64px; }
+  .site-foot { background: var(--paper); border-top: 1px solid var(--ink); padding: 48px 0 24px; }
+  .site-foot .foot-grid, .site-foot .foot-strip, .site-foot .foot-base {
+    max-width: 1408px; margin-left: auto; margin-right: auto; padding-left: 24px; padding-right: 24px; }
+  .site-foot .foot-strip { margin-top: 48px; padding-top: 20px; border-top: 1px solid var(--rule); }
+  .site-foot .foot-base { margin-top: 16px; padding-top: 0; }
+  @media (max-width: 900px) {
+    .closing { padding: 64px 16px 48px; }
+    .site-foot .foot-grid, .site-foot .foot-strip, .site-foot .foot-base { padding-left: 16px; padding-right: 16px; }
+  }
+
+  /* hero, compact: fits one laptop screen. Title beside the headline, story beside the live filter. */
+  .hero { padding: 16px 24px 48px; }
+  .hero .console-body { padding: 32px 40px 0; column-gap: 56px; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
+    grid-template-rows: none;
+    grid-template-areas: "kick spec" "title show" "lede try" "lede tool" "specs tool" "cta tool" "steps steps"; }
+  .hero .spec { font-size: 18px; }
+  .hero h1 { font-size: clamp(60px, 7vw, 104px); margin: 8px 0 16px; align-self: end; }
+  .hero .display { align-self: end; margin: 0 0 16px; max-width: 22ch; }
+  .hero .side-lede { font-size: 15.5px; line-height: 1.6; margin: 0 0 20px; border-top: 1px solid var(--rule); padding-top: 20px; }
+  .hero .try { margin: 0 0 12px; border-top: 1px solid var(--rule); padding-top: 20px; }
+  .hero .specs { display: grid; grid-template-columns: 1fr 1fr; column-gap: 24px; margin: 0 0 20px; }
+  .hero .specs div { padding: 8px 0; }
+  .hero .side-cta .pill { min-height: 44px; }
+  .hero .side-cta p { margin-top: 8px; }
+  .hero .steps { margin: 20px -40px 0; border-top: 1px solid var(--rule); border-bottom: 0; }
+  .hero .steps li { padding: 14px 24px 16px 40px; font-size: 13.5px; }
+  .hero .steps li + li { padding-left: 24px; border-left: 1px solid var(--rule); }
+  .hero .steps .it { font-size: 18px; margin-right: 8px; }
+  .hero .steps b { display: inline; margin: 0 0 0 0; font-size: 15px; }
+  .hero .steps b::after { content: ""; display: block; height: 4px; }
+  @media (max-width: 900px) {
+    .hero { padding: 16px 12px 40px; }
+    .hero .console-body { padding: 24px 20px 0; grid-template-columns: minmax(0, 1fr);
+      grid-template-areas: "kick" "spec" "title" "show" "lede" "specs" "cta" "try" "tool" "steps"; }
+    .hero .side-cta { margin-bottom: 28px; }
+    .hero .steps { margin: 28px -20px 0; }
+    .hero .steps li, .hero .steps li + li { padding: 14px 20px; border-left: 0; }
+  }
+
+  /* border glow, ported from the portfolio's BorderGlow: the edge nearest the pointer lights up.
+     --edge (0-100) = how close the pointer is to the edge; --angle = which side it is on. */
+  .console { position: relative; isolation: isolate; overflow: visible; --edge: 0; --angle: 45deg; }
+  .console::before, .console > .edge-light {
+    content: ""; position: absolute; border-radius: inherit; pointer-events: none;
+    opacity: calc((var(--edge) - 30) / 70); transition: opacity .25s ease-out; }
+  .console:not(:hover)::before, .console:not(:hover) > .edge-light { opacity: 0; transition: opacity .75s ease-in-out; }
+  /* the lit border: a green mesh, cut to a 2px ring, then to a wedge facing the pointer */
+  .console::before { inset: -1px; padding: 2px; z-index: 2;
+    background: radial-gradient(at 80% 55%, #34d399, transparent 50%), radial-gradient(at 8% 6%, #8fe6c2, transparent 50%),
+                radial-gradient(at 51% 4%, #00654f, transparent 50%), var(--proj);
+    mask: conic-gradient(from var(--angle), #000 25%, transparent 40%, transparent 60%, #000 75%),
+          linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    mask-composite: intersect, exclude; }
+  /* the soft halo outside the border, same wedge */
+  .console > .edge-light { inset: -40px; z-index: 1;
+    mask: conic-gradient(from var(--angle), #000 2.5%, transparent 10%, transparent 90%, #000 97.5%); }
+  .console > .edge-light::before { content: ""; position: absolute; inset: 40px; border-radius: inherit;
+    box-shadow: 0 0 2px 0 rgb(0 101 79 / 60%), 0 0 8px 0 rgb(0 101 79 / 35%),
+                0 0 24px 2px rgb(0 101 79 / 20%), 0 0 48px 4px rgb(0 101 79 / 10%); }
+  @media (hover: none) { .console::before, .console > .edge-light { display: none; } }
+
+  /* the card halos reach 40px past the cards; never let that widen the page */
+  html, body { overflow-x: clip; }
+  /* interactive dot field (ported from the portfolio's ParticleField) replaces the CSS dots */
+  body { background-image: none; }
+  .dot-field { position: fixed; inset: 0; z-index: -1; pointer-events: none; }
+
+  @media (max-width: 560px) { .hero .specs { grid-template-columns: 1fr; } }
+
+  /* softer glow: lights up only close to the edge, narrower wedge, fainter halo */
+  .console::before, .console > .edge-light { opacity: calc((var(--edge) - 55) / 45 * .7); }
+  .console::before { padding: 1.5px;
+    mask: conic-gradient(from var(--angle), #000 12%, transparent 26%, transparent 74%, #000 88%),
+          linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    mask-composite: intersect, exclude; }
+  .console > .edge-light { inset: -24px;
+    mask: conic-gradient(from var(--angle), #000 1.5%, transparent 7%, transparent 93%, #000 98.5%); }
+  .console > .edge-light::before { inset: 24px;
+    box-shadow: 0 0 2px 0 rgb(0 101 79 / 35%), 0 0 8px 0 rgb(0 101 79 / 18%), 0 0 18px 1px rgb(0 101 79 / 8%); }
+
+  /* footer author block: photo beside name, one line about him, one link */
+  .author { display: flex; gap: 16px; align-items: flex-start; max-width: 420px; }
+  .author img { width: 56px; height: 56px; border-radius: 999px; object-fit: cover; flex: none;
+                border: 1px solid var(--rule-2); }
+  .author p { margin: 0; }
+  .author-name { font-weight: 700; font-size: 16px; color: var(--ink); }
+  .author-role { font-size: 14px; color: var(--ink-3); margin: 4px 0 10px !important; line-height: 1.5; }
+  .site-foot a.author-link { font-size: 14px; font-weight: 600; color: var(--ink);
+    text-decoration: underline; text-decoration-color: var(--proj); text-underline-offset: 4px; }
+  .site-foot a.author-link:hover { text-decoration-thickness: 2px; }
+
+  /* ---------------- the live follow-up demo ---------------- */
+  .demo-top { display: flex; gap: 12px; align-items: flex-start; justify-content: space-between; padding: 12px 16px 2px; }
+  .demo-top .chips { margin-left: 0; flex: none; }
+  .demo-q { margin: 0; font-size: 14.5px; line-height: 1.45; }
+  .demo-q .muted { font-size: 13px; }
+  .demo-tag { font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase;
+    padding: 2px 8px; border-radius: 999px; border: 1px solid var(--rule-2); color: var(--ink-3);
+    margin-left: 6px; vertical-align: 2px; white-space: nowrap; }
+  .demo-tag.probe { border-color: var(--proj); color: var(--proj); }
+  .rubric { list-style: none; margin: 0; padding: 4px 16px 8px; }
+  .rubric li { display: grid; grid-template-columns: minmax(0, 1fr) 36px 88px 34px; gap: 10px; align-items: center;
+    margin: 0; padding: 1px 0; font-size: 12.5px; line-height: 1.5; color: var(--ink-2); }
+  .rubric li.now { color: var(--ink); font-weight: 700; }
+  .rubric .nm { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .rubric .w, .rubric .n { font-family: var(--mono); font-size: 11.5px; color: var(--ink-3); text-align: right; }
+  .rubric .bar-track { height: 6px; }
+  .rubric .bar-fill { background: var(--proj); }
+  .answers { display: flex; flex-wrap: wrap; gap: 8px; }
+  .answers .chip { font-size: 12.5px; padding: 5px 11px; }
+  .chip[aria-pressed="true"] { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+  .demo-out { border-top: 1px solid var(--rule); padding: 10px 16px; display: flex; gap: 12px; align-items: center; justify-content: space-between; flex-wrap: wrap; }
+  .demo-why { display: flex; gap: 12px; align-items: baseline; padding: 0 16px 10px; }
+  .demo-why p { margin: 0; font-size: 13px; line-height: 1.5; color: var(--ink-2); flex: 1; min-height: 3em; }
+  .verdict { background: var(--sunk); color: var(--ink-3); }
+  .verdict.probe { background: var(--proj-w); color: var(--proj); }
+  .verdict.move { background: var(--sunk); color: var(--ink); }
+  .linkbtn { font: inherit; font-size: 12.5px; border: 0; background: none; color: var(--ink-3);
+    text-decoration: underline; text-underline-offset: 3px; cursor: pointer; padding: 0; }
+  @media (max-width: 560px) { .rubric li { grid-template-columns: minmax(0, 1fr) 70px 30px; } .rubric .w { display: none; }
+    .demo-top { flex-direction: column-reverse; gap: 8px; } }
+
+  /* small comparison table cell for the target column */
+  td.hit { color: var(--proj); font-weight: 700; }
+  .split { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin: 24px 0; }
+  .split .card { margin: 0; }
+  .split h3 { margin-top: 0; }
+  @media (max-width: 620px) { .split { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<canvas class="dot-field" aria-hidden="true"></canvas>
+
+<div class="bar">
+  <div class="wrap">
+    <a class="mark" href="https://johnandrei.vercel.app" aria-label="zeref. portfolio home">zeref<span>.</span></a>
+    <div class="brand"><span class="sep">/</span> callback-ai</div>
+    <div class="seg" role="group" aria-label="Reading level">
+      <button type="button" id="m-plain" aria-pressed="true">Simple</button>
+      <button type="button" id="m-expert" aria-pressed="false">Technical</button>
+    </div>
+    <button type="button" class="iconbtn" id="theme" aria-label="Switch colour theme">◐</button>
+  </div>
+</div>
+
+<header class="hero">
+<div class="console">
+  <div class="console-body">
+    <div class="console-side">
+      <div class="hero-kick">
+        <p class="caps lined">Interview practice agent</p>
+      </div>
+      <h1>callback-ai</h1>
+      <p class="spec it">Nemotron 3 Super &middot; 12-question budget</p>
+  <p class="lede side-lede" data-mode="plain">
+    Say "I improved performance" in a real interview and the next question is: by how
+    much, and how did you know? That follow-up is where interviews are decided, and a
+    list of practice questions never asks it. This interviewer reads your answer,
+    decides whether it was specific enough, and asks again when it wasn't. Every score
+    in the debrief quotes your own words.
+  </p>
+  <p class="lede side-lede" data-mode="expert">
+    An LLM agent that turns a job post into weighted competencies, spends a fixed
+    12-question budget on the ones it is least sure about, probes when an answer's
+    coverage score falls under the interviewer's threshold, and rejects any score whose
+    evidence quote is not a verbatim substring of the transcript.
+  </p>
+
+      <dl class="specs">
+        <div><dt>Ranks like a person</dt><dd>&rho; 0.90</dd></div>
+        <div><dt>Regrade spread</dt><dd>0.33 / 10</dd></div>
+        <div><dt>Vague answers probed</dt><dd>4 of 4</dd></div>
+        <div><dt>Tests</dt><dd>105</dd></div>
+      </dl>
+      <div class="side-cta">
+        <a class="pill" href="https://callback-ai.netlify.app">Try the live app</a>
+        <p class="small muted">Free, no sign-up. After a quiet spell the first interview takes about 50s to start.</p>
+      </div>
+    </div>
+    <div class="console-main">
+      <p class="caps">What this project shows</p>
+      <p class="display">A list asks the next question. <span class="it">This one asks the follow-up.</span></p>
+      <ol class="steps">
+        <li><span class="it">01</span><b>Read</b>Turn the job post into the few skills the role is really hiring for.</li>
+        <li><span class="it">02</span><b>Ask</b>Spend each question where it knows least. Follow up on vague answers.</li>
+        <li><span class="it">03</span><b>Grade</b>Every score quotes your words, or it is thrown out and redone.</li>
+      </ol>
+      <p class="caps try">The follow-up rule, running live <span class="it">on a real job post's skills</span></p>
+  <div class="scorer">
+    <div class="demo-top">
+      <p class="demo-q" id="demo-q" aria-live="polite"></p>
+      <div class="chips" role="group" aria-label="Interviewer">
+        <button type="button" class="chip" data-persona="friendly" aria-pressed="false">Nova</button>
+        <button type="button" class="chip" data-persona="neutral" aria-pressed="true">Ellis</button>
+        <button type="button" class="chip" data-persona="adversarial" aria-pressed="false">Kade</button>
+      </div>
+    </div>
+    <ul class="rubric" id="rubric" aria-label="How sure the interviewer is about each skill"></ul>
+    <div class="demo-out">
+      <div class="answers" role="group" aria-label="Your answer">
+        <button type="button" class="chip" data-cov="0.2">Vague answer</button>
+        <button type="button" class="chip" data-cov="0.5">Some detail</button>
+        <button type="button" class="chip" data-cov="0.9">Specific, with numbers</button>
+      </div>
+      <div class="verdict" id="verdict">WAITING</div>
+    </div>
+    <div class="demo-why">
+      <p id="demo-why"></p>
+      <button type="button" class="linkbtn" id="demo-reset">Start over</button>
+    </div>
+  </div>
+    </div>
+  </div>
+</div>
+</header>
+
+<div class="page-grid">
+<nav class="rail" aria-label="Chapters"><p class="caps rail-h">Contents</p></nav>
+<main>
+
+<section class="panel-sec" id="result">
+<div class="console">
+  <div class="console-head"><span class="step-no">01</span><span class="caps">The result</span></div>
+  <div class="console-body">
+    <div class="console-side"><div class="side-stick">
+    <h2 data-mode="plain">It ranks answers the way a person does, and squeezes the middle</h2>
+    <h2 data-mode="expert">Spearman &rho; 0.90 on both runs, with mid-quality answers compressed to 2 to 3 out of 10</h2>
+    </div></div>
+    <div class="console-main">
+
+  <div class="headline-num">
+    <span class="x">0.90</span>
+    <p>agreement between the agent's ranking of 10 answers and a person's ranking of the same answers. Both runs gave the same number.</p>
+  </div>
+
+  <p data-mode="plain">
+    I wrote 10 interview answers, from useless to excellent, and scored each one myself
+    from 1 to 10. Then the agent scored them. If it puts them in the same order I did,
+    the agreement is 1.0. It got 0.90, over the 0.8 I set as the bar before running it.
+  </p>
+  <p data-mode="expert">
+    <code>eval/discrimination.py</code>: 10 hand-graded answers, one
+    <code>score_answer</code> call each at temperature 0, Spearman rank correlation
+    against the human scores. Target &rho; &ge; 0.8, set in the PRD before the first run.
+    Run twice on 26 September 2026; both runs gave &rho; 0.901.
+  </p>
+
+  <figure>
+    <div class="legend">
+      <span><i style="background:var(--proj)"></i>Agent score, run 1 (dot) and run 2 (ring)</span>
+      <span><i style="background:var(--rule-2)"></i>Where a perfect match would sit</span>
+    </div>
+    <div id="chart-rank"></div>
+    <figcaption>
+      Each answer's score from a person (across) against the agent's score (up), both out of 10.
+      The order is right, but every answer I rated 3 to 6 got a 2 or a 3.
+    </figcaption>
+  </figure>
+
+  <div class="tw"><table>
+    <thead><tr><th>Check</th><th>Target</th><th class="num">Llama 3.1 8B</th><th class="num">Nemotron run 1</th><th class="num">Run 2</th></tr></thead>
+    <tbody>
+      <tr><td>Ranks like a person (&rho;, 10 answers)</td><td>&ge; 0.8</td>
+          <td class="num">0.81</td><td class="num hit" id="t-rho1"></td><td class="num hit" id="t-rho2"></td></tr>
+      <tr><td>Same answer graded 5 times: spread, out of 10</td><td>&le; 1.0</td>
+          <td class="num">0.0</td><td class="num hit" id="t-sd1"></td><td class="num hit" id="t-sd2"></td></tr>
+      <tr><td>Follows up on vague answers</td><td>&ge; 0.8</td>
+          <td class="num">1.0</td><td class="num hit" id="t-pv1"></td><td class="num hit" id="t-pv2"></td></tr>
+      <tr><td>Follows up on specific answers</td><td>&le; 0.1</td>
+          <td class="num">0.0</td><td class="num hit" id="t-ps1"></td><td class="num hit" id="t-ps2"></td></tr>
+    </tbody>
+  </table></div>
+
+  <div class="note">
+    <p class="kicker">Ranking well is not the same as scoring well</p>
+    <p style="margin:0" data-mode="plain">
+      Rank agreement only asks whether the order is right. The chart shows what it hides:
+      the agent treats a decent answer almost like a bad one. In a real session that
+      means more follow-ups than a person would ask, and a debrief that sounds harsher
+      than it should for a middling answer. I am reporting it because 0.90 alone would
+      make it look better than it is.
+    </p>
+    <p style="margin:0" data-mode="expert">
+      Spearman &rho; is rank-only, so it cannot see calibration. Human scores 3 to 6 all
+      map to 0.2 or 0.3 coverage, below every interviewer's probe threshold except Nova's
+      0.3. The practical effect is extra probes on mid-quality answers and harsh per-skill
+      scores in the debrief. A calibration metric (mean absolute error against the human
+      score) would expose this directly and is not in the eval set yet.
+    </p>
+  </div>
+
+  <div class="note warn">
+    <p class="kicker">The first numbers were measured on a model that no longer exists</p>
+    <p style="margin:0">
+      The Llama column is from July 2026. NVIDIA retired that model on 26 August, so
+      those numbers now describe nothing you can run. The Nemotron columns are the live
+      app's model, run twice on the same answers. Grading also stopped being perfectly
+      repeatable: Llama gave the same score five times out of five, Nemotron gave a 9.2
+      among its 10s. That spread, <b>0.32</b> and <b>0.33</b> points, is well inside the
+      target, but it is not zero.
+    </p>
+  </div>
+    </div>
+  </div>
+</div>
+</section>
+
+<section class="panel-sec" id="premise">
+<div class="console">
+  <div class="console-head"><span class="step-no">02</span><span class="caps">The premise</span></div>
+  <div class="console-body">
+    <div class="console-side"><div class="side-stick">
+    <h2 data-mode="plain">Interviews are decided by the second question</h2>
+    <h2 data-mode="expert">Static question banks cannot condition on the answer they just got</h2>
+    </div></div>
+    <div class="console-main">
+  <div data-mode="plain">
+    <p>
+      Most interview practice is a list: here is a question, type an answer, here is the
+      next question. The list does not care what you said. A real interviewer does. When
+      you say "we made it faster", they ask how much faster, and that is the moment a
+      prepared answer falls apart.
+    </p>
+    <p>
+      So the useful thing to practise is not the first answer. It is being pushed on it.
+      That needs an interviewer that reads the answer, notices what is missing, and asks
+      about exactly that.
+    </p>
+  </div>
+  <div data-mode="expert">
+    <p>
+      A question bank is a fixed sequence, so it cannot condition on the answer it just
+      received. The signal an interviewer acts on (a missing metric, an unowned "we", a
+      vague quantifier) only exists after the answer, which makes the follow-up a
+      decision, not a lookup.
+    </p>
+    <p>
+      That decision is what the agent makes each turn: probe the same competency, move
+      on, or give up on it, from the answer's coverage score and the interviewer's
+      threshold.
+    </p>
+  </div>
+    </div>
+  </div>
+</div>
+</section>
+
+<section class="panel-sec" id="loop">
+<div class="console">
+  <div class="console-head"><span class="step-no">03</span><span class="caps">The loop</span></div>
+  <div class="console-body">
+    <div class="console-side"><div class="side-stick">
+    <h2 data-mode="plain">The model judges the answer. Plain code makes every decision after that.</h2>
+    <h2 data-mode="expert">One LLM judgement per turn, deterministic policy around it</h2>
+    </div></div>
+    <div class="console-main">
+  <p data-mode="plain">
+    Every turn, the model does one job: read your answer and say how complete it was,
+    with a quote from it as proof. Whether to follow up, which skill to ask about next,
+    and when to stop are all decided by ordinary code, the same way every time.
+  </p>
+  <p data-mode="expert">
+    <code>session_engine.py</code> re-reads the session state each turn and calls one
+    scoring tool. <code>probe_policy.decide</code> and
+    <code>budget_allocator.allocate_next_competency</code> are pure functions of that
+    state, so a transcript replays to the same sequence of decisions (NFR-5).
+  </p>
+
+  <div class="split">
+    <div class="card">
+      <h3>Left to the model</h3>
+      <ul style="margin:0">
+        <li>Which skills a job post is hiring for, and their weights</li>
+        <li>How complete an answer is (0 to 1), with a quote</li>
+        <li>The wording of each question and follow-up</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>Enforced in code</h3>
+      <ul style="margin:0">
+        <li>Follow up or move on: score against a fixed threshold</li>
+        <li>At most one follow-up per skill, four questions per skill</li>
+        <li>12 questions, never more</li>
+        <li>The quote must appear word for word in your answer</li>
+      </ul>
+    </div>
+  </div>
+
+  <p>
+    The three interviewers only differ in how hard they push. Nova follows up below
+    <b>0.30</b>, Ellis below <b>0.45</b>, Kade below <b>0.60</b>. None of them changes how an
+    answer is scored, so a friendlier interviewer asks softer questions but does not mark
+    more generously.
+  </p>
+    </div>
+  </div>
+</div>
+</section>
+
+<section class="panel-sec" id="gate">
+<div class="console">
+  <div class="console-head"><span class="step-no">04</span><span class="caps">The evidence gate</span></div>
+  <div class="console-body">
+    <div class="console-side"><div class="side-stick">
+    <h2 data-mode="plain">No quote, no score</h2>
+    <h2 data-mode="expert">A substring check, not a second model, decides whether a score is grounded</h2>
+    </div></div>
+    <div class="console-main">
+  <p data-mode="plain">
+    A model asked to grade an answer will happily praise things you never said. So every
+    score has to come with a quote from your answer, and the code checks that the quote is
+    really there, word for word. If it isn't, the score is thrown away and the model tries
+    again once. If the second try fails too, the score is shown as low confidence instead
+    of being trusted.
+  </p>
+  <p data-mode="expert">
+    <code>evidence_gate.quote_is_supported</code> lowercases both strings, collapses
+    whitespace and tests containment. A failure increments one shared rejection counter,
+    regenerates once, then returns the result flagged <code>low_confidence</code> rather
+    than looping, which protects the per-answer latency budget.
+  </p>
+  <pre><code>def quote_is_supported(quote, transcript):
+    if not quote:
+        return False
+    return _normalize(quote) in _normalize(transcript)</code></pre>
+  <p>
+    It is deliberately dumb. A second model asked "is this grounded?" can be talked into
+    yes. A substring test cannot. The same gate guards the scores during the interview
+    and the final debrief, so the debrief cannot cite anything the live scores could not.
+  </p>
+    </div>
+  </div>
+</div>
+</section>
+
+<section class="panel-sec" id="budget">
+<div class="console">
+  <div class="console-head"><span class="step-no">05</span><span class="caps">The budget</span></div>
+  <div class="console-body">
+    <div class="console-side"><div class="side-stick">
+    <h2 data-mode="plain">Twelve questions, spent where it knows least</h2>
+    <h2 data-mode="expert">Coverage first, then weight &times; uncertainty, and why the order matters</h2>
+    </div></div>
+    <div class="console-main">
+  <p data-mode="plain">
+    A 12-question interview cannot ask about everything twice. So after each answer the
+    agent updates how sure it is about that skill, and picks the next skill by two things:
+    how much the job cares about it, and how unsure it still is. The live demo at the top
+    is exactly this code.
+  </p>
+  <p data-mode="expert">
+    Each competency keeps an exponential moving average of its coverage scores
+    (&alpha; = 0.6, prior 0.5). Priority is weight &times; (1 &minus; EMA). The allocator
+    takes the highest priority among competencies asked fewer than four times, with ties
+    broken by rubric order so the choice is deterministic.
+  </p>
+
+  <h3>The first version never asked about half the job</h3>
+  <p>
+    Ranking only by weight &times; uncertainty has a trap. A weak answer makes that skill
+    more uncertain, which makes it the top priority again, which gets another weak answer.
+    The budget collapsed onto the first few skills and the rest were never asked about at
+    all, so the debrief had nothing to score them on.
+  </p>
+  <p>
+    The fix was to put coverage first: any skill not yet asked about outranks every skill
+    that has been. Only after each skill has had one question does the budget follow
+    uncertainty.
+  </p>
+  <pre><code>return max(eligible, key=lambda name: (eligible[name].asked_count == 0,
+                                       eligible[name].priority))</code></pre>
+    </div>
+  </div>
+</div>
+</section>
+
+<section class="panel-sec" id="broke">
+<div class="console">
+  <div class="console-head"><span class="step-no">06</span><span class="caps">What broke</span></div>
+  <div class="console-body">
+    <div class="console-side"><div class="side-stick">
+    <h2 data-mode="plain">Five times it looked fine and wasn't</h2>
+    <h2 data-mode="expert">Failures found in production, not in tests</h2>
+    </div></div>
+    <div class="console-main">
+
+  <h3>A health check that said "ok" for a month while every interview failed</h3>
+  <p>
+    NVIDIA retired Llama 3.1 8B on 26 August 2026. From then on every interview on the
+    live site failed with a <code>502</code>, because NVIDIA answered <code>410 Gone</code>.
+    The health check kept saying <code>ok</code> the whole time, because it only checks
+    that the server is up and never calls the model. Most other models on NVIDIA's list
+    now answered <code>404</code>.
+  </p>
+
+  <h3>A replacement model that copied the example instead of filling it in</h3>
+  <p>
+    Llama 3.2 11B was the first replacement. It returned JSON with single quotes and copied
+    the schema's placeholder values on 3 of 3 resume parses, so any interview started with
+    a resume failed. Nemotron 3 Super parsed the same resume correctly 3 of 3 times. It is
+    slower: about 23 seconds to start and 8 to 25 seconds per answer.
+  </p>
+
+  <h3>One scoring call in ten came back "overloaded"</h3>
+  <p>
+    NVIDIA's free tier answered about 1 in 10 scoring calls with <code>503 Service
+    temporarily overloaded</code>, and each one failed the visitor's answer. Server errors
+    are now retried after 1 second and then 2. Timeouts and client errors are not retried,
+    because trying again would not change the answer.
+  </p>
+
+  <h3>The answer box was emptied before the answer was sent</h3>
+  <p>
+    The page cleared the text box as soon as you pressed send, before the server replied.
+    Any failed request silently destroyed a paragraph someone had just typed. The text now
+    stays until the server confirms it, and comes back with a retry prompt if it fails.
+  </p>
+
+  <h3>A portfolio link could point the server at itself</h3>
+  <p>
+    The app fetches your portfolio page to read it. Nothing stopped that link from being a
+    private address, so a visitor could make the server request pages on its own network.
+    It now resolves the address first and refuses anything that is not public, follows
+    redirects one at a time so each hop is checked, and stops reading after 2 MB.
+  </p>
+    </div>
+  </div>
+</div>
+</section>
+
+<section class="panel-sec" id="limits">
+<div class="console">
+  <div class="console-head"><span class="step-no">07</span><span class="caps">What it cannot do</span></div>
+  <div class="console-body">
+    <div class="console-side"><div class="side-stick">
+    <h2 data-mode="plain">Small test sets, one server, and a harsh middle</h2>
+    <h2 data-mode="expert">Known limits of the evaluation and the deployment</h2>
+    </div></div>
+    <div class="console-main">
+  <ul>
+    <li><b>The test sets are small.</b> The ranking check uses 10 answers; the plan calls
+      for 20. The follow-up check uses 4: two vague, two specific. "4 of 4" is two runs of
+      two, not a rate you can trust to two decimals.</li>
+    <li><b>It scores middling answers too low.</b> See the chart in section 01. Nothing in
+      the eval measures calibration yet.</li>
+    <li><b>Two numbers in the plan are not measured.</b> How often the evidence gate
+      rejects a score, and how uneven the budget really gets, are logged in every session
+      but not yet summarised over real sessions.</li>
+    <li data-mode="plain"><b>A restart ends every interview in progress.</b> Sessions live
+      in the server's memory, so the free host restarting drops them. The page warns before
+      you leave, but it cannot save you from the server.</li>
+    <li data-mode="expert"><b>Sessions are in process memory</b> on a single worker
+      (<code>WEB_CONCURRENCY=1</code>). A restart drops in-flight sessions; scaling out
+      needs shared storage such as Redis.</li>
+    <li><b>The health check still does not call the model.</b> The failure in section 06
+      would still go unnoticed by it.</li>
+    <li><b>Portfolio reading is best effort.</b> Sites that build their page with
+      JavaScript come back empty, and the interview falls back to the resume.</li>
+  </ul>
+    </div>
+  </div>
+</div>
+</section>
+
+<section class="panel-sec" id="repro">
+<div class="console">
+  <div class="console-head"><span class="step-no">08</span><span class="caps">Reproduce it</span></div>
+  <div class="console-body">
+    <div class="console-side"><div class="side-stick">
+    <h2>Run it yourself</h2>
+    </div></div>
+    <div class="console-main">
+  <h3>Try it without installing anything</h3>
+  <p>
+    The <a href="https://callback-ai.netlify.app">live app</a> needs no account. Paste a
+    job post, pick an interviewer, and answer by typing or by voice.
+  </p>
+
+  <h3>Run it offline, no key</h3>
+  <p>
+    A built-in mock model answers every prompt with simple rules, so the whole app and
+    all 105 tests run without an API key.
+  </p>
+  <pre><code>git clone https://github.com/Zeref538/callback-ai &amp;&amp; cd callback-ai
+pip install -e ".[dev]"
+python -m pytest -q                                  # 105 tests, no key needed
+CALLBACK_AI_PROVIDER=mock python -m callback_ai.server   # then open localhost:8000</code></pre>
+
+  <h3>Re-run the numbers on this page</h3>
+  <p>
+    Needs a free NVIDIA key from <a href="https://build.nvidia.com">build.nvidia.com</a>
+    in <code>.env</code>. One run takes about two and a half minutes.
+  </p>
+  <pre><code>NIM_MODEL=nvidia/nemotron-3-super-120b-a12b python -m eval.run_all nemotron-run3
+python docs/build_site.py          # rebuilds this page from eval/results/</code></pre>
+  <p class="small muted">
+    <b>Stack:</b> Python, FastAPI, NVIDIA NIM (Nemotron 3 Super), Microsoft neural voices
+    via <code>edge-tts</code>, plain HTML and CSS on Netlify, the API on Render, optional
+    accounts on Firebase. The raw results are in
+    <a href="https://github.com/Zeref538/callback-ai/tree/master/eval/results"><code>eval/results/</code></a>.
+  </p>
+    </div>
+  </div>
+</div>
+</section>
+
+</main>
+</div>
+
+<section class="closing">
+  <p class="display closing-line">Built to ask the second question. <span class="it">The one that decides the callback.</span></p>
+</section>
+
+<footer class="site-foot">
+  <div class="wrap foot-grid">
+    <div>
+      <div class="author">
+        <img src="img/john.jpg" alt="" width="56" height="56">
+        <div>
+          <p class="author-name">John Andrei Martinez</p>
+          <p class="author-role">Builds AI tools and measures whether they work. This page is one of his case studies.</p>
+          <a class="author-link" href="https://johnandrei.vercel.app">Visit my portfolio</a>
+        </div>
+      </div>
+    </div>
+    <nav aria-label="More">
+      <p class="foot-h">This project</p>
+      <a href="https://callback-ai.netlify.app">The live app</a>
+      <a href="https://github.com/Zeref538/callback-ai">Source code</a>
+      <a href="https://github.com/Zeref538/callback-ai/tree/master/eval/results">Raw eval results</a>
+    </nav>
+    <nav aria-label="Elsewhere">
+      <p class="foot-h">More work</p>
+      <a href="https://johnandrei.vercel.app">Portfolio</a>
+      <a href="https://zeref538.github.io/liitllm/">LiitLLM, a Taglish model</a>
+      <a href="https://github.com/Zeref538">GitHub</a>
+    </nav>
+  </div>
+  <div class="foot-strip caps">
+    <span>callback-ai case study</span><span>FastAPI &middot; NVIDIA NIM &middot; Netlify + Render</span><span>Evals run 26 Sep 2026</span>
+  </div>
+  <div class="wrap foot-base small">
+    Evaluation answers are hand-written fixtures in <code>eval/fixtures/</code>.
+    Fonts: Schibsted Grotesk, Newsreader and Sora, SIL OFL.
+  </div>
+</footer>
+
+<script>
+const D = {"runs":[{"model":"nvidia/nemotron-3-super-120b-a12b","run":"nemotron-run1","date":"2026-09-26","discrimination":{"n":10,"rho":0.9007495174861511,"meets_target":true,"agent_scores":[0.2,0.2,0.2,0.3,0.92,0.96,0.1,0.2,0.2,0.92],"human_scores":[1,2,4,6,8,10,1,3,6,9]},"consistency":{"scores_10pt":[9.200000000000001,10.0,10.0,10.0,10.0],"stdev_10pt":0.31999999999999956,"meets_target":true},"probe_precision":{"vague_probe_rate":1.0,"specific_probe_rate":0.0,"meets_target":true,"items":[{"label":"vague","coverage":0.1,"probed":true},{"label":"specific","coverage":0.95,"probed":false},{"label":"vague","coverage":0.1,"probed":true},{"label":"specific","coverage":0.95,"probed":false}]},"seconds":134.2},{"model":"nvidia/nemotron-3-super-120b-a12b","run":"nemotron-run2","date":"2026-09-26","discrimination":{"n":10,"rho":0.9007495174861511,"meets_target":true,"agent_scores":[0.2,0.2,0.2,0.3,0.95,0.96,0.1,0.2,0.2,0.95],"human_scores":[1,2,4,6,8,10,1,3,6,9]},"consistency":{"scores_10pt":[10.0,9.200000000000001,10.0,10.0,9.5],"stdev_10pt":0.33226495451672267,"meets_target":true},"probe_precision":{"vague_probe_rate":1.0,"specific_probe_rate":0.0,"meets_target":true,"items":[{"label":"vague","coverage":0.2,"probed":true},{"label":"specific","coverage":0.96,"probed":false},{"label":"vague","coverage":0.1,"probed":true},{"label":"specific","coverage":0.92,"probed":false}]},"seconds":156.0}],"rubric":[{"name":"Distributed Systems Design","weight":0.25},{"name":"Idempotency & Data Consistency","weight":0.2},{"name":"API & Service Development","weight":0.15},{"name":"Production Incident Management","weight":0.1},{"name":"Cross-functional Collaboration","weight":0.1},{"name":"Stakeholder Communication","weight":0.1},{"name":"Mentorship & Team Growth","weight":0.1}],"personas":{"friendly":{"name":"Nova","threshold":0.3},"neutral":{"name":"Ellis","threshold":0.45},"adversarial":{"name":"Kade","threshold":0.6}},"maxProbes":1,"maxAsks":4,"budget":12,"alpha":0.6};
+
+/* ---------- the follow-up demo: the app's own rules, ported line for line ----------
+   probe_policy.decide, budget_allocator.allocate_next_competency and
+   update_after_answer. Constants and the rubric are injected from the Python
+   source and a real parse by docs/build_site.py. */
+let persona = "neutral", S, turn, current, pending;
+
+function reset() {
+  S = D.rubric.map(c => ({ name: c.name, weight: c.weight, ema: 0.5, asked: 0, probes: 0 }));
+  turn = 0; pending = null;
+  next();
+  say("WAITING", "", "Each answer gets a coverage score from 0 to 1. The rest is plain code, as it runs in the app.");
+}
+function allocate() {
+  let pool = S.filter(s => s.asked < D.maxAsks);
+  if (!pool.length) pool = S;
+  // Python's max() keeps the first of equal keys, so use a strict > here.
+  let best = pool[0];
+  const key = s => [s.asked === 0 ? 1 : 0, s.weight * (1 - s.ema)];
+  for (const s of pool) {
+    const a = key(s), b = key(best);
+    if (a[0] > b[0] || (a[0] === b[0] && a[1] > b[1])) best = s;
+  }
+  return best;
+}
+function decide(cov, s) {
+  const th = D.personas[persona].threshold;
+  if (cov < th && s.probes < D.maxProbes) return "probe";
+  if (cov < th) return "switch";
+  return "move_on";
+}
+function next() {
+  if (turn >= D.budget) { current = null; draw(); return; }
+  turn += 1;
+  current = pending || allocate();
+  draw();
+}
+function answer(cov) {
+  if (!current) return;
+  const s = current, th = D.personas[persona].threshold, who = D.personas[persona].name;
+  const action = decide(cov, s);
+  s.asked += 1;
+  s.ema = D.alpha * cov + (1 - D.alpha) * s.ema;
+  if (action === "probe") { s.probes += 1; pending = s; } else pending = null;
+  const why = cov < th
+    ? (action === "probe"
+        ? `${cov.toFixed(2)} is under ${who}'s ${th.toFixed(2)}, so ${who} asks again about the same skill.`
+        : `${cov.toFixed(2)} is still under ${th.toFixed(2)}, but this skill already had its one follow-up. ${who} moves on.`)
+    : `${cov.toFixed(2)} clears ${who}'s ${th.toFixed(2)}. ` + (S.some(x => x.asked === 0)
+        ? "Next is a skill it hasn't asked about yet."
+        : "Next is the skill with the highest weight times uncertainty.");
+  say(action === "probe" ? "FOLLOW UP" : action === "switch" ? "GIVE UP ON IT" : "MOVE ON", action === "probe" ? "probe" : "move", why);
+  next();
+}
+function say(label, cls, why) {
+  const v = document.getElementById("verdict");
+  v.textContent = label; v.className = "verdict " + cls;
+  document.getElementById("demo-why").textContent = why;
+}
+function draw() {
+  const q = document.getElementById("demo-q");
+  if (!current) {
+    q.innerHTML = `<b>All ${D.budget} questions used.</b> <span class="muted">The debrief would start here.</span>`;
+  } else {
+    q.innerHTML = `<span class="muted">Question ${turn} of ${D.budget}</span><br><b></b>` +
+      `<span class="demo-tag ${pending ? "probe" : ""}">${pending ? "follow-up" : current.asked ? "back again" : "new skill"}</span>`;
+    q.querySelector("b").textContent = current.name;
+  }
+  const ul = document.getElementById("rubric");
+  ul.replaceChildren(...S.map(s => {
+    const li = document.createElement("li");
+    if (s === current) li.className = "now";
+    li.innerHTML = `<span class="nm"></span><span class="w">${s.weight.toFixed(2)}</span>` +
+      `<span class="bar-track" title="how sure it is"><span class="bar-fill" style="display:block;width:${Math.round(s.ema * 100)}%"></span></span>` +
+      `<span class="n">${s.asked}&times;</span>`;
+    li.querySelector(".nm").textContent = s.name;
+    return li;
+  }));
+}
+document.querySelectorAll("[data-persona]").forEach(b => b.addEventListener("click", () => {
+  persona = b.dataset.persona;
+  document.querySelectorAll("[data-persona]").forEach(x => x.setAttribute("aria-pressed", x === b));
+}));
+document.querySelectorAll("[data-cov]").forEach(b => b.addEventListener("click", () => answer(+b.dataset.cov)));
+document.getElementById("demo-reset").addEventListener("click", reset);
+reset();
+
+/* ---------- results table, filled from eval/results/ ---------- */
+D.runs.forEach((r, i) => {
+  const n = i + 1, set = (id, v) => { document.getElementById(id).textContent = v; };
+  set("t-rho" + n, r.discrimination.rho.toFixed(2));
+  set("t-sd" + n, r.consistency.stdev_10pt.toFixed(2));
+  set("t-pv" + n, r.probe_precision.vague_probe_rate.toFixed(1));
+  set("t-ps" + n, r.probe_precision.specific_probe_rate.toFixed(1));
+});
+
+/* ---------- chart: person's score vs agent's score ---------- */
+const NS = "http://www.w3.org/2000/svg";
+function svg(tag, attrs) {
+  const el = document.createElementNS(NS, tag);
+  for (const k in attrs) el.setAttribute(k, attrs[k]);
+  return el;
+}
+function rankChart() {
+  const W = 760, H = 330, PL = 56, PR = 18, PT = 14, PB = 48;
+  const X = v => PL + (v / 10) * (W - PL - PR);
+  const Y = v => PT + (1 - v / 10) * (H - PT - PB);
+  const s = svg("svg", { viewBox: `0 0 ${W} ${H}`, role: "img",
+    "aria-label": "Agent score against a person's score for 10 answers, two runs" });
+  for (let v = 0; v <= 10; v += 2) {
+    s.appendChild(svg("line", { x1: PL, x2: W - PR, y1: Y(v), y2: Y(v), stroke: "var(--rule)", "stroke-width": 1 }));
+    const t = svg("text", { x: PL - 9, y: Y(v) + 4, "text-anchor": "end", fill: "var(--ink-3)", "font-size": 11, "font-family": "var(--mono)" });
+    t.textContent = v; s.appendChild(t);
+    const u = svg("text", { x: X(v), y: H - PB + 18, "text-anchor": "middle", fill: "var(--ink-3)", "font-size": 11, "font-family": "var(--mono)" });
+    u.textContent = v; s.appendChild(u);
+  }
+  // the band the page talks about: people said 3 to 6, the agent said 2 to 3
+  s.appendChild(svg("rect", { x: X(2.6), y: Y(3.6), width: X(6.4) - X(2.6), height: Y(1.4) - Y(3.6),
+    fill: "var(--proj-w)", rx: 6 }));
+  s.appendChild(svg("line", { x1: X(0), y1: Y(0), x2: X(10), y2: Y(10), stroke: "var(--rule-2)",
+    "stroke-width": 1.5, "stroke-dasharray": "5 5" }));
+  D.runs.forEach((r, i) => {
+    const d = r.discrimination;
+    d.human_scores.forEach((h, k) => {
+      s.appendChild(svg("circle", { cx: X(h) + (i ? 4 : -4), cy: Y(d.agent_scores[k] * 10), r: 6,
+        fill: i ? "none" : "var(--proj)", stroke: "var(--proj)", "stroke-width": 2 }));
+    });
+  });
+  const a = svg("text", { x: (PL + W - PR) / 2, y: H - 8, "text-anchor": "middle", fill: "var(--ink-3)", "font-size": 12 });
+  a.textContent = "Person's score, out of 10";
+  s.appendChild(a);
+  const b = svg("text", { x: 14, y: (PT + H - PB) / 2, "text-anchor": "middle", fill: "var(--ink-3)", "font-size": 12,
+    transform: `rotate(-90 14 ${(PT + H - PB) / 2})` });
+  b.textContent = "Agent's score";
+  s.appendChild(b);
+  document.getElementById("chart-rank").appendChild(s);
+}
+rankChart();
+
+/* ---------- controls ---------- */
+const root = document.documentElement;
+function setView(v) {
+  root.dataset.view = v;
+  document.getElementById("m-plain").setAttribute("aria-pressed", v === "plain");
+  document.getElementById("m-expert").setAttribute("aria-pressed", v === "expert");
+  try { localStorage.setItem("cbai-view", v); } catch (e) {}
+}
+document.getElementById("m-plain").addEventListener("click", () => setView("plain"));
+document.getElementById("m-expert").addEventListener("click", () => setView("expert"));
+
+document.getElementById("theme").addEventListener("click", () => {
+  const dark = matchMedia("(prefers-color-scheme: dark)").matches;
+  const cur = root.dataset.theme || (dark ? "dark" : "light");
+  const next = cur === "dark" ? "light" : "dark";
+  root.dataset.theme = next;
+  try { localStorage.setItem("cbai-theme", next); } catch (e) {}
+});
+
+try {
+  const v = localStorage.getItem("cbai-view"); if (v) setView(v);
+  const t = localStorage.getItem("cbai-theme"); if (t) root.dataset.theme = t;
+} catch (e) {}
+
+// Chapter rail: built from each section's label, current one highlighted.
+(() => {
+  const rail = document.querySelector(".rail");
+  const secs = [...document.querySelectorAll("main section[id]")];
+  const links = secs.map(sec => {
+    const no = sec.querySelector(".console-head .step-no");
+    const title = sec.querySelector(".console-head .caps");
+    if (!no || !title) return null;
+    const a = document.createElement("a");
+    a.href = "#" + sec.id;
+    a.innerHTML = `<span>${no.textContent.trim()}</span>${title.textContent.trim()}`;
+    rail.appendChild(a);
+    return [sec, a];
+  }).filter(Boolean);
+  const io = new IntersectionObserver(es => es.forEach(e => {
+    if (!e.isIntersecting) return;
+    links.forEach(([sec, a]) => a.setAttribute("aria-current", sec === e.target));
+  }), { rootMargin: "-45% 0px -50% 0px" });
+  links.forEach(([sec]) => io.observe(sec));
+})();
+
+// Border glow: same maths as the portfolio's BorderGlow.jsx, one listener for every card.
+document.querySelectorAll(".console").forEach(card => {
+  card.prepend(Object.assign(document.createElement("span"), { className: "edge-light" }));
+  card.addEventListener("pointermove", e => {
+    const r = card.getBoundingClientRect();
+    const dx = e.clientX - r.left - r.width / 2, dy = e.clientY - r.top - r.height / 2;
+    // 0 at the centre, 1 on the edge, whichever edge is nearer in proportion
+    const edge = Math.min(Math.max(Math.abs(dx) / (r.width / 2), Math.abs(dy) / (r.height / 2)), 1);
+    let angle = Math.atan2(dy, dx) * 180 / Math.PI + 90;
+    if (angle < 0) angle += 360;
+    card.style.setProperty("--edge", (edge * 100).toFixed(1));
+    card.style.setProperty("--angle", angle.toFixed(1) + "deg");
+  });
+});
+
+// Dot field: a grid of dots that grow, turn green and lean toward the pointer.
+// Same approach as the portfolio's ParticleField.jsx; sleeps when the pointer is still.
+(() => {
+  const canvas = document.querySelector(".dot-field");
+  const ctx = canvas.getContext("2d");
+  const dpr = Math.min(devicePixelRatio || 1, 2), GAP = 22, RADIUS = 140;
+  let dots = [], mouse = { x: -9999, y: -9999 }, raf = null, idle = 0, colours;
+  const readColours = () => {
+    const cs = getComputedStyle(document.documentElement);
+    colours = { dot: cs.getPropertyValue("--dot").trim() || "rgba(28,25,23,.13)",
+                hot: cs.getPropertyValue("--proj").trim() || "#00654f" };
+  };
+  const build = () => {
+    canvas.width = innerWidth * dpr; canvas.height = innerHeight * dpr;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    dots = [];
+    for (let x = GAP / 2; x < innerWidth; x += GAP)
+      for (let y = GAP / 2; y < innerHeight; y += GAP) dots.push({ ox: x, oy: y, x, y });
+  };
+  const draw = () => {
+    ctx.clearRect(0, 0, innerWidth, innerHeight);
+    let moving = false;
+    for (const d of dots) {
+      const dx = mouse.x - d.ox, dy = mouse.y - d.oy, dist = Math.hypot(dx, dy);
+      const t = dist < RADIUS ? 1 - dist / RADIUS : 0;           // 0 far away, 1 under the pointer
+      const tx = d.ox + dx * 0.08 * t, ty = d.oy + dy * 0.08 * t;
+      d.x += (tx - d.x) * 0.2; d.y += (ty - d.y) * 0.2;
+      if (Math.abs(tx - d.x) > 0.05 || Math.abs(ty - d.y) > 0.05) moving = true;
+      const size = 2 + t * 2;
+      ctx.globalAlpha = t ? 0.35 + t * 0.65 : 1;
+      ctx.fillStyle = t ? colours.hot : colours.dot;
+      ctx.beginPath(); ctx.arc(d.x, d.y, size / 2, 0, 7); ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+    idle = mouse.x === -9999 && !moving ? idle + 1 : 0;
+    raf = idle > 30 ? null : requestAnimationFrame(draw);
+  };
+  const wake = () => { if (raf === null) raf = requestAnimationFrame(draw); };
+  readColours(); build(); draw();
+  addEventListener("resize", () => { build(); wake(); });
+  // theme switch changes the colours: re-read them
+  new MutationObserver(() => { readColours(); wake(); })
+    .observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+  if (matchMedia("(prefers-reduced-motion: reduce)").matches) return;   // static dots only
+  addEventListener("pointermove", e => { mouse.x = e.clientX; mouse.y = e.clientY; wake(); }, { passive: true });
+  document.addEventListener("pointerleave", () => { mouse.x = mouse.y = -9999; });
+  document.addEventListener("visibilitychange", () => { if (!document.hidden) wake(); });
+})();
+</script>
+</body>
+</html>
