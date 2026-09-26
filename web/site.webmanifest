@@ -1,0 +1,26 @@
+{
+  "name": "callback-ai",
+  "short_name": "callback-ai",
+  "description": "Practice interviews with an AI interviewer that reads the job post, asks follow-ups when an answer is vague, and grades every claim against your own words.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#1a1a1f",
+  "theme_color": "#10b981",
+  "icons": [
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    },
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ]
+}
