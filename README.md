@@ -1,6 +1,6 @@
 # callback-ai
 
-### ▶︎ [Live demo — callback-ai.onrender.com](https://callback-ai.onrender.com)
+
 
 [![CI](https://github.com/Zeref538/callback-ai/actions/workflows/ci.yml/badge.svg)](https://github.com/Zeref538/callback-ai/actions/workflows/ci.yml)
 [![Live](https://img.shields.io/badge/demo-live-46E3B7?logo=render&logoColor=white)](https://callback-ai.onrender.com)
