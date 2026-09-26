@@ -2,3 +2,21 @@
 # nothing to build; Netlify just serves the web/ folder as-is.
 [build]
   publish = "web"
+
+# Security headers for every page. The CSP lists each outside server the page
+# really uses; anything else is blocked:
+#   fonts.googleapis.com / fonts.gstatic.com  - Google Fonts
+#   callback-ai.onrender.com                  - the API
+#   www.gstatic.com, apis.google.com          - Firebase SDK and its Google sign-in pop-up
+#   *.googleapis.com, *.firebaseapp.com       - Firebase Auth + Firestore
+#   accounts.google.com                       - the Google sign-in window
+# 'unsafe-inline' is needed because the app's script and styles live inside
+# index.html; moving them to files would let it go.
+[[headers]]
+  for = "/*"
+  [headers.values]
+    Content-Security-Policy = "default-src 'self'; script-src 'self' 'unsafe-inline' https://www.gstatic.com https://apis.google.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob:; media-src 'self' data: blob:; connect-src 'self' https://callback-ai.onrender.com https://*.googleapis.com https://www.gstatic.com; frame-src https://*.firebaseapp.com https://accounts.google.com https://apis.google.com; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'"
+    X-Content-Type-Options = "nosniff"
+    X-Frame-Options = "DENY"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+    Permissions-Policy = "microphone=(self), camera=(), geolocation=()"
