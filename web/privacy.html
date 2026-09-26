@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Privacy · callback-ai</title>
+<meta name="description" content="What callback-ai does with the job posts, resumes and answers you give it, who else sees them, and how to delete them.">
+<meta name="color-scheme" content="dark light">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%2310b981'/%3E%3Cpath d='M13 13l-4 4 4 4' fill='none' stroke='%23052e1b' stroke-width='2.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3Cpath d='M9 17h9a5 5 0 0 0 5-5V9' fill='none' stroke='%23052e1b' stroke-width='2.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+<style>
+  :root { --bg: #0b0f0e; --fg: #e8eceb; --muted: #9aa5a2; --line: #1f2a27; --accent: #34d399; }
+  @media (prefers-color-scheme: light) { :root { --bg: #fbfcfc; --fg: #14201d; --muted: #52605c; --line: #dfe6e3; --accent: #047857; } }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--fg); font: 16px/1.65 system-ui, -apple-system, "Segoe UI", sans-serif; }
+  main { max-width: 42rem; margin: 0 auto; padding: 2.5rem 1rem 4rem; }
+  a { color: var(--accent); }
+  a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  h1 { font-size: 1.75rem; line-height: 1.25; margin: 1.5rem 0 .25rem; }
+  h2 { font-size: 1.1rem; margin: 2rem 0 .5rem; }
+  p, li { color: var(--fg); }
+  .muted { color: var(--muted); font-size: 14px; }
+  ul { padding-left: 1.2rem; }
+  li { margin: .35rem 0; }
+  .back { font-size: 14px; text-decoration: none; }
+  .back:hover { text-decoration: underline; }
+  hr { border: 0; border-top: 1px solid var(--line); margin: 2.5rem 0 1rem; }
+</style>
+</head>
+<body>
+<main>
+  <a class="back" href="/">← Back to callback-ai</a>
+  <h1>Privacy</h1>
+  <p class="muted">Last updated 26 September 2026</p>
+
+  <p>callback-ai is a free practice tool for job interviews, built and run by John Andrei Martinez.
+  This page says what happens to what you type into it. It describes what the code actually does;
+  the code is public on <a href="https://github.com/Zeref538/callback-ai">GitHub</a> if you want to check.</p>
+
+  <h2>What you give it</h2>
+  <ul>
+    <li>A job post, and optionally a resume and a portfolio link.</li>
+    <li>Your answers to the interview questions, typed or spoken.</li>
+    <li>If you create an account: your email address, and your name if you sign in with Google.</li>
+  </ul>
+  <p>There are no ads, no analytics and no tracking cookies.</p>
+
+  <h2>Who else sees it</h2>
+  <ul>
+    <li><strong>NVIDIA.</strong> Your job post, resume, answers and the text of your portfolio page are sent to
+      NVIDIA's AI service to write the questions and grade the answers.
+      <a href="https://www.nvidia.com/en-us/about-nvidia/privacy-policy/">NVIDIA's privacy policy</a>.</li>
+    <li><strong>Microsoft.</strong> If the interviewer's voice is on, the text of each question (not your answers)
+      is sent to Microsoft's text-to-speech service to be read aloud.</li>
+    <li><strong>Google or Microsoft, for voice answers.</strong> Speaking an answer uses your browser's built-in
+      speech recognition. In Chrome that audio is processed by Google, and in Edge by Microsoft.
+      Typing your answers avoids this.</li>
+    <li><strong>Your portfolio site.</strong> If you give a portfolio link, our server visits that page once to read it.</li>
+    <li><strong>Google Fonts.</strong> The page loads its fonts from Google, which sees your IP address.</li>
+    <li><strong>Firebase (Google), only if you create an account.</strong> Your sign-in details and saved interviews are
+      stored in Firebase. <a href="https://firebase.google.com/support/privacy">Firebase's privacy information</a>.</li>
+    <li><strong>The hosts.</strong> The page is served by Netlify and the server runs on Render. Like any website,
+      they see your IP address when you connect.</li>
+  </ul>
+
+  <h2>What is kept, and for how long</h2>
+  <ul>
+    <li><strong>On our server:</strong> a running interview is held in memory, and its transcript is written to a
+      file while it runs. Only the 200 most recent interviews are kept. When a newer one pushes an interview out,
+      or the server restarts, it is gone. The server keeps no accounts.</li>
+    <li><strong>Job posts:</strong> the list of skills worked out from a job post is saved on the server, so the same
+      post isn't analysed twice. It holds the job post's contents, not yours.</li>
+    <li><strong>As a guest:</strong> your past interviews are saved only in your own browser.</li>
+    <li><strong>With an account:</strong> your past interviews are saved to your account until you delete them.
+      Only you can read them.</li>
+  </ul>
+
+  <h2>Deleting your data</h2>
+  <ul>
+    <li><strong>Guest:</strong> use <em>Clear</em> next to History in the sidebar.</li>
+    <li><strong>Account:</strong> <em>Clear</em> deletes your saved interviews. <em>Delete account</em>, under your
+      email in the sidebar, deletes your interviews and the account itself.</li>
+  </ul>
+
+  <h2>Questions</h2>
+  <p>Open an issue on <a href="https://github.com/Zeref538/callback-ai/issues">GitHub</a>.</p>
+
+  <hr>
+  <p class="muted">Scores are an AI model's read of your answers. They are practice feedback, not a hiring decision.</p>
+</main>
+</body>
+</html>

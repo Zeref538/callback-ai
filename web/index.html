@@ -5,6 +5,17 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>callback-ai: adaptive interview simulator</title>
 <meta name="color-scheme" content="dark light">
+<meta name="description" content="Practice interviews with an AI interviewer that reads the job post, asks follow-ups when an answer is vague, and grades every claim against your own words.">
+<link rel="canonical" href="https://callback-ai.netlify.app/">
+<!-- link previews (LinkedIn, Slack, iMessage...) -->
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://callback-ai.netlify.app/">
+<meta property="og:title" content="callback-ai: an interviewer that actually follows up">
+<meta property="og:description" content="Practice interviews with an AI interviewer that reads the job post, asks follow-ups when an answer is vague, and grades every claim against your own words.">
+<meta property="og:image" content="https://callback-ai.netlify.app/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
 <!-- SVG favicon: the callback mark on an emerald tile, matches the in-app logo -->
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%2310b981'/%3E%3Cpath d='M13 13l-4 4 4 4' fill='none' stroke='%23052e1b' stroke-width='2.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3Cpath d='M9 17h9a5 5 0 0 0 5-5V9' fill='none' stroke='%23052e1b' stroke-width='2.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -498,7 +509,10 @@ details[open] > summary .disclosure svg { transform: rotate(90deg); }
 /* ---------- account ---------- */
 .account { padding: .75rem .75rem 0; }
 .account .btn-outline { width: 100%; font-size: 13px; }
-.account-row { display: flex; align-items: center; justify-content: space-between; gap: .5rem; font-size: 12.5px; }
+.account-row { display: flex; flex-wrap: wrap; align-items: center; gap: .3rem .6rem; font-size: 12.5px; }
+.account-row .account-email { flex-basis: 100%; }
+.account-actions { display: flex; gap: .6rem; flex-shrink: 0; }
+.inline-link { color: var(--primary); text-decoration: underline; text-underline-offset: 2px; }
 .account-email { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--muted-fg); }
 .auth-google { width: 100%; display: flex; align-items: center; justify-content: center; gap: .5rem; }
 .auth-or { display: flex; align-items: center; gap: .6rem; margin: .9rem 0; font-size: 12px; color: var(--muted-fg); }
@@ -625,11 +639,14 @@ details[open] > summary .disclosure svg { transform: rotate(90deg); }
       <button class="btn-outline" id="signin-open" type="button">Sign in to save your history</button>
       <div class="account-row hidden" id="account-row">
         <span class="account-email" id="account-email"></span>
-        <button class="hist-clear" id="signout" type="button">Sign out</button>
+        <span class="account-actions">
+          <button class="hist-clear" id="signout" type="button">Sign out</button>
+          <button class="hist-clear" id="delete-account" type="button">Delete account</button>
+        </span>
       </div>
     </div>
 
-    <div class="side-foot">Practice tool. Scores are an LLM's read of your answers, not a hiring decision.</div>
+    <div class="side-foot">Practice tool. Scores are an LLM's read of your answers, not a hiring decision. <a class="inline-link" href="/privacy.html">Privacy</a></div>
   </aside>
 
   <div class="main">
@@ -730,6 +747,7 @@ details[open] > summary .disclosure svg { transform: rotate(90deg); }
           </div>
 
           <button type="submit" class="btn-primary" id="start-btn"><span id="start-btn-label">Start interview</span></button>
+          <p class="hint" style="text-align:center">What you enter is sent to NVIDIA's AI to run the interview. <a class="inline-link" href="/privacy.html">Privacy</a></p>
         </form>
       </section>
 
@@ -792,7 +810,7 @@ details[open] > summary .disclosure svg { transform: rotate(90deg); }
 <div class="modal-scrim hidden" id="auth-scrim">
   <div class="modal" role="dialog" aria-modal="true" aria-labelledby="auth-title">
     <h3 id="auth-title">Sign in</h3>
-    <p>Keep your interview history on any device. It's optional. You can keep practising as a guest.</p>
+    <p>Keep your interview history on any device. It's optional. You can keep practising as a guest. <a class="inline-link" href="/privacy.html">What's stored</a></p>
     <button class="btn-outline auth-google" id="auth-google" type="button">
       <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><path fill="#4285F4" d="M22.6 12.2c0-.8-.1-1.5-.2-2.2H12v4.2h5.9a5 5 0 0 1-2.2 3.3v2.7h3.6c2.1-1.9 3.3-4.8 3.3-8z"/><path fill="#34A853" d="M12 23c3 0 5.5-1 7.3-2.7l-3.6-2.8c-1 .7-2.2 1.1-3.7 1.1-2.9 0-5.3-1.9-6.2-4.5H2.1v2.8A11 11 0 0 0 12 23z"/><path fill="#FBBC05" d="M5.8 14.1a6.6 6.6 0 0 1 0-4.2V7.1H2.1a11 11 0 0 0 0 9.8z"/><path fill="#EA4335" d="M12 5.4c1.6 0 3.1.6 4.2 1.7l3.2-3.2A11 11 0 0 0 2.1 7.1l3.7 2.8C6.7 7.3 9.1 5.4 12 5.4z"/></svg>
       Continue with Google
@@ -1390,13 +1408,7 @@ $("clear-history").onclick = async () => {
       confirmLabel: "Delete", cancelLabel: "Keep",
     });
     if (!ok) return;
-    try {
-      // ponytail: one batch holds 500 deletes; loop in chunks if anyone ever saves more.
-      const snap = await fb.getDocs(myInterviews());
-      const batch = fb.writeBatch(fb.db);
-      snap.docs.forEach((d) => batch.delete(d.ref));
-      await batch.commit();
-    } catch { toast("Couldn't delete. Try again.", true); return; }
+    try { await deleteAllInterviews(); } catch { toast("Couldn't delete. Try again.", true); return; }
   } else {
     localStorage.removeItem(HISTORY_KEY);
   }
@@ -1450,6 +1462,14 @@ const AUTH_ERRORS = {
 const authError = (err) => AUTH_ERRORS[err.code] || "Sign-in failed. Try again.";
 function signedIn() { openAuth(false); toast("Signed in. Your history is saved to your account."); }
 
+async function deleteAllInterviews() {
+  // ponytail: one batch holds 500 deletes; loop in chunks if anyone ever saves more.
+  const snap = await fb.getDocs(myInterviews());
+  const batch = fb.writeBatch(fb.db);
+  snap.docs.forEach((d) => batch.delete(d.ref));
+  await batch.commit();
+}
+
 // A guest's history moves into their account the first time they sign in,
 // so trying the app before signing up doesn't cost them anything.
 async function adoptLocalHistory() {
@@ -1479,6 +1499,24 @@ async function initAccounts() {
   $("auth-scrim").onclick = (e) => { if (e.target === $("auth-scrim")) openAuth(false); };
   $("auth-switch").onclick = () => setAuthMode(authMode === "up" ? "in" : "up");
   $("signout").onclick = () => fb.signOut(fb.auth);
+  $("delete-account").onclick = async () => {
+    const ok = await showConfirm({
+      title: "Delete your account?",
+      body: "This deletes your account and every interview saved to it. It can't be undone.",
+      confirmLabel: "Delete account", cancelLabel: "Keep",
+    });
+    if (!ok) return;
+    try {
+      await deleteAllInterviews();
+      await fb.deleteUser(user);   // signs out too; the auth listener resets the page
+      toast("Account deleted.");
+    } catch (err) {
+      // Firebase only lets a recent sign-in delete an account, as a safety check.
+      toast(err.code === "auth/requires-recent-login"
+        ? "For safety, sign out and back in, then delete again."
+        : "Couldn't delete your account. Try again.", true);
+    }
+  };
   $("auth-google").onclick = async () => {
     // A pop-up, not a redirect: the page (and any interview in it) stays put.
     try { await fb.signInWithPopup(fb.auth, new fb.GoogleAuthProvider()); signedIn(); }
