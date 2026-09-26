@@ -1564,7 +1564,10 @@ $("clear-history").onclick = async () => {
 // purpose: it is for Google Analytics, which this app doesn't use.
 const FIREBASE_CONFIG = {
   apiKey: "AIzaSyBurRJncrSnTUUpsIjdgiYKILwMOTOjMII",
-  authDomain: "callback-ai-95df3.firebaseapp.com",
+  // Our own address, not the firebaseapp.com one, so Google's sign-in screen
+  // says "continue to callback-ai.netlify.app". netlify.toml proxies /__/auth/
+  // to Firebase, and the Google OAuth client lists this site's /__/auth/handler.
+  authDomain: "callback-ai.netlify.app",
   projectId: "callback-ai-95df3",
   appId: "1:84771268508:web:ff8e0694c9c74442d88a59",
 };
