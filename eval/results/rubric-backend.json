@@ -1,0 +1,50 @@
+{
+  "job_post_hash": "502d82310a51916e",
+  "target_position": "Backend Engineer (Mid-level)",
+  "competencies": [
+    {
+      "name": "Distributed Systems Design",
+      "weight": 0.25,
+      "seniority_bar": "Mid-level: capable of designing scalable, fault\u2011tolerant services that handle high transaction volumes.",
+      "description": "Experience building and operating distributed systems, understanding failure modes, and ensuring reliability."
+    },
+    {
+      "name": "Idempotency & Data Consistency",
+      "weight": 0.2,
+      "seniority_bar": "Mid-level: implements idempotent operations and strong consistency guarantees under failure.",
+      "description": "Proficiency with techniques to ensure idempotency and maintain data consistency in payment processing."
+    },
+    {
+      "name": "API & Service Development",
+      "weight": 0.15,
+      "seniority_bar": "Mid-level: designs clear, versioned APIs and internal services with strong contracts.",
+      "description": "Skill in designing APIs and services that meet functional and non\u2011functional requirements."
+    },
+    {
+      "name": "Production Incident Management",
+      "weight": 0.1,
+      "seniority_bar": "Mid-level: leads debugging of production incidents and authors actionable postmortems.",
+      "description": "Ability to triage, diagnose, and resolve production issues, and communicate learnings."
+    },
+    {
+      "name": "Cross\u2011functional Collaboration",
+      "weight": 0.1,
+      "seniority_bar": "Mid-level: works effectively with product, compliance, and other stakeholders on payment flows.",
+      "description": "Experience collaborating with non\u2011engineering teams to translate requirements into technical solutions."
+    },
+    {
+      "name": "Stakeholder Communication",
+      "weight": 0.1,
+      "seniority_bar": "Mid-level: articulates technical tradeoffs clearly to non\u2011technical audiences.",
+      "description": "Skill in explaining complex decisions, risks, and alternatives to product, compliance, or leadership."
+    },
+    {
+      "name": "Mentorship & Team Growth",
+      "weight": 0.1,
+      "seniority_bar": "Mid-level: provides guidance and code reviews to junior engineers, fostering their development.",
+      "description": "Willingness to mentor teammates, share knowledge, and contribute to a supportive engineering culture."
+    }
+  ],
+  "source": "eval/fixtures/job_posts/01_backend_engineer.txt",
+  "model": "nvidia/nemotron-3-super-120b-a12b"
+}

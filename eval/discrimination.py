@@ -58,7 +58,8 @@ def measure_discrimination(chat: ChatProvider, corpus_path: Path = CORPUS_PATH) 
         human_scores.append(item["human_score"])
 
     rho = spearman_rho(agent_scores, human_scores)
-    return {"n": len(corpus), "rho": rho, "meets_target": rho >= 0.8}
+    return {"n": len(corpus), "rho": rho, "meets_target": rho >= 0.8,
+            "agent_scores": agent_scores, "human_scores": human_scores}
 
 
 if __name__ == "__main__":

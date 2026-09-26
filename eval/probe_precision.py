@@ -24,12 +24,14 @@ def measure_probe_precision(chat: ChatProvider, persona_name: str = "neutral", f
     persona = get_persona(persona_name)
 
     fires = {"vague": [], "specific": []}
+    per_item = []
     for item in items:
         gate = EvidenceGate(max_regenerate_attempts=1)
         result = score_answer(item["question"], item["answer"], COMPETENCY, DESCRIPTION, chat, gate)
         state = CompetencyState(weight=1.0)  # fresh per item, so probe_count cap doesn't cross items
         action = decide(result.result.coverage_score, state, persona)
         fires[item["label"]].append(action == "probe")
+        per_item.append({"label": item["label"], "coverage": result.result.coverage_score, "probed": action == "probe"})
 
     vague_rate = sum(fires["vague"]) / len(fires["vague"]) if fires["vague"] else None
     specific_rate = sum(fires["specific"]) / len(fires["specific"]) if fires["specific"] else None
@@ -39,6 +41,7 @@ def measure_probe_precision(chat: ChatProvider, persona_name: str = "neutral", f
         "specific_probe_rate": specific_rate,
         "meets_target": (vague_rate is not None and vague_rate >= 0.8)
         and (specific_rate is not None and specific_rate <= 0.1),
+        "items": per_item,
     }
 
 
