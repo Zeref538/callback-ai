@@ -1,6 +1,6 @@
 # 0001: Optional accounts with Supabase
 
-**Status:** accepted, 2026-09-26
+**Status:** superseded by [0002](0002-firebase-instead-of-supabase.md), 2026-09-26
 
 ## Context
 

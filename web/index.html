@@ -788,7 +788,7 @@ details[open] > summary .disclosure svg { transform: rotate(90deg); }
   </div>
 </div>
 
-<!-- optional sign-in: Google or email + password, handled by Supabase -->
+<!-- optional sign-in: Google or email + password, handled by Firebase -->
 <div class="modal-scrim hidden" id="auth-scrim">
   <div class="modal" role="dialog" aria-modal="true" aria-labelledby="auth-title">
     <h3 id="auth-title">Sign in</h3>
@@ -823,9 +823,6 @@ details[open] > summary .disclosure svg { transform: rotate(90deg); }
   </div>
 </div>
 
-<!-- Supabase browser library, pinned to an exact version so a new release
-     can't change the page under us. If it fails to load, the app runs guest-only. -->
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.2/dist/umd/supabase.js"></script>
 <script>
 // On Render or localhost one server serves both page and API. On a static host
 // (Netlify) the page is alone, so the API is called on Render.
@@ -1321,13 +1318,20 @@ $("fill-sample").onclick = () => {
 let pastSessions = [];
 const loadLocal = () => { try { return JSON.parse(localStorage.getItem(HISTORY_KEY)) || []; } catch { return []; } };
 const saveLocal = (items) => localStorage.setItem(HISTORY_KEY, JSON.stringify(items.slice(0, 30)));
-const toRow = (entry) => ({ entry, created_at: new Date(entry.at || Date.now()).toISOString() });
+// Stored as a JSON string: Firestore rejects nested arrays and undefined
+// values, and a report can hold both.
+const toDoc = (entry) => ({ json: JSON.stringify(entry), created_at: entry.at || Date.now() });
+const myInterviews = () => fb.collection(fb.db, "users", user.uid, "interviews");
 
 async function refreshHistory() {
   if (user) {
-    const { data, error } = await sb.from("interviews").select("entry").order("created_at", { ascending: false }).limit(30);
-    if (error) toast("Couldn't load your saved interviews.", true);
-    pastSessions = error ? [] : data.map((r) => r.entry);
+    try {
+      const snap = await fb.getDocs(fb.query(myInterviews(), fb.orderBy("created_at", "desc"), fb.limit(30)));
+      pastSessions = snap.docs.map((d) => JSON.parse(d.data().json));
+    } catch {
+      toast("Couldn't load your saved interviews.", true);
+      pastSessions = [];
+    }
   } else {
     pastSessions = loadLocal();
   }
@@ -1338,8 +1342,7 @@ async function addHistory(entry) {
   pastSessions = [entry, ...pastSessions].slice(0, 30);
   renderHistory();
   if (user) {
-    const { error } = await sb.from("interviews").insert(toRow(entry));
-    if (!error) return;
+    try { await fb.addDoc(myInterviews(), toDoc(entry)); return; } catch {}
     // Keep it on this device so it isn't lost; it's uploaded on next sign-in.
     toast("Couldn't reach your account. Saved on this device for now.", true);
   }
@@ -1387,8 +1390,13 @@ $("clear-history").onclick = async () => {
       confirmLabel: "Delete", cancelLabel: "Keep",
     });
     if (!ok) return;
-    const { error } = await sb.from("interviews").delete().eq("user_id", user.id);
-    if (error) { toast("Couldn't delete. Try again.", true); return; }
+    try {
+      // ponytail: one batch holds 500 deletes; loop in chunks if anyone ever saves more.
+      const snap = await fb.getDocs(myInterviews());
+      const batch = fb.writeBatch(fb.db);
+      snap.docs.forEach((d) => batch.delete(d.ref));
+      await batch.commit();
+    } catch { toast("Couldn't delete. Try again.", true); return; }
   } else {
     localStorage.removeItem(HISTORY_KEY);
   }
@@ -1398,17 +1406,17 @@ $("clear-history").onclick = async () => {
 };
 
 // ---------- accounts (optional) ----------
-// Supabase handles sign-in and stores history. Both values are public by
-// design: the database's row-level security rules are what keep each
-// person's rows private. Left empty, the app runs guest-only.
-const SUPABASE_URL = "";
-const SUPABASE_KEY = "";   // the "publishable" key, never the secret one
-const sb = SUPABASE_URL && window.supabase ? window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY) : null;
+// Firebase handles sign-in and stores history. The config below is public by
+// design: the Firestore security rules (firestore.rules) are what keep each
+// person's interviews private. Left null, the app runs guest-only.
+const FIREBASE_CONFIG = null;   // paste the web app's firebaseConfig object here
+const FIREBASE_SDK = "https://www.gstatic.com/firebasejs/12.19.0";   // pinned so a release can't change the page under us
+let fb = null;     // the loaded Firebase functions plus { auth, db }
 let user = null;
 let authMode = "in";   // "in" = sign in, "up" = create account
 
 function renderAccount() {
-  $("account").classList.toggle("hidden", !sb);
+  $("account").classList.toggle("hidden", !fb);
   $("signin-open").classList.toggle("hidden", !!user);
   $("account-row").classList.toggle("hidden", !user);
   if (user) $("account-email").textContent = user.email || "Signed in";
@@ -1427,50 +1435,76 @@ const openAuth = (open) => {
   if (open) { setAuthMode("in"); $("auth-email").focus(); }
 };
 
+// Firebase's error codes, in words a person can act on.
+const AUTH_ERRORS = {
+  "auth/invalid-credential": "Wrong email or password.",
+  "auth/invalid-email": "That doesn't look like an email address.",
+  "auth/email-already-in-use": "That email already has an account. Sign in instead.",
+  "auth/weak-password": "Use a longer password (8+ characters).",
+  "auth/too-many-requests": "Too many tries. Wait a minute and try again.",
+  "auth/popup-blocked": "Your browser blocked the Google window. Allow pop-ups for this site and try again.",
+  "auth/network-request-failed": "No connection. Check your internet and try again.",
+  "auth/operation-not-allowed": "That sign-in method isn't switched on yet.",
+  "auth/unauthorized-domain": "Sign-in isn't enabled for this web address yet.",
+};
+const authError = (err) => AUTH_ERRORS[err.code] || "Sign-in failed. Try again.";
+function signedIn() { openAuth(false); toast("Signed in. Your history is saved to your account."); }
+
 // A guest's history moves into their account the first time they sign in,
 // so trying the app before signing up doesn't cost them anything.
 async function adoptLocalHistory() {
   const local = loadLocal();
   if (!local.length) return;
-  const { error } = await sb.from("interviews").insert(local.map(toRow));
-  if (!error) localStorage.removeItem(HISTORY_KEY);
+  try {
+    const batch = fb.writeBatch(fb.db);
+    local.forEach((entry) => batch.set(fb.doc(myInterviews()), toDoc(entry)));
+    await batch.commit();
+    localStorage.removeItem(HISTORY_KEY);
+  } catch {}   // stays local; retried on the next sign-in
 }
 
-if (sb) {
+async function initAccounts() {
+  if (!FIREBASE_CONFIG) return refreshHistory();
+  try {
+    const [appMod, authMod, dbMod] = await Promise.all(
+      ["app", "auth", "firestore"].map((m) => import(`${FIREBASE_SDK}/firebase-${m}.js`)));
+    const app = appMod.initializeApp(FIREBASE_CONFIG);
+    fb = { ...authMod, ...dbMod, auth: authMod.getAuth(app), db: dbMod.getFirestore(app) };
+  } catch {
+    return refreshHistory();   // SDK blocked or offline: carry on as a guest
+  }
   $("signin-open").onclick = () => openAuth(true);
   $("auth-cancel").onclick = () => openAuth(false);
   document.addEventListener("keydown", (e) => { if (e.key === "Escape" && !$("auth-scrim").classList.contains("hidden")) openAuth(false); });
   $("auth-scrim").onclick = (e) => { if (e.target === $("auth-scrim")) openAuth(false); };
   $("auth-switch").onclick = () => setAuthMode(authMode === "up" ? "in" : "up");
-  $("signout").onclick = () => sb.auth.signOut();
+  $("signout").onclick = () => fb.signOut(fb.auth);
   $("auth-google").onclick = async () => {
-    // Leaves the page for Google and comes back here signed in.
-    const { error } = await sb.auth.signInWithOAuth({ provider: "google", options: { redirectTo: location.origin + location.pathname } });
-    if (error) $("auth-msg").textContent = error.message;
+    // A pop-up, not a redirect: the page (and any interview in it) stays put.
+    try { await fb.signInWithPopup(fb.auth, new fb.GoogleAuthProvider()); signedIn(); }
+    catch (err) { if (err.code !== "auth/popup-closed-by-user" && err.code !== "auth/cancelled-popup-request") $("auth-msg").textContent = authError(err); }
   };
   $("auth-form").addEventListener("submit", async (e) => {
     e.preventDefault();
     const email = $("auth-email").value.trim(), password = $("auth-password").value;
     $("auth-submit").disabled = true;
-    const { data, error } = authMode === "up"
-      ? await sb.auth.signUp({ email, password, options: { emailRedirectTo: location.origin + location.pathname } })
-      : await sb.auth.signInWithPassword({ email, password });
-    $("auth-submit").disabled = false;
-    if (error) { $("auth-msg").textContent = error.message; return; }
-    if (authMode === "up" && !data.session) { $("auth-msg").textContent = "Check your inbox to confirm your email, then sign in."; return; }
-    openAuth(false);
+    try {
+      await (authMode === "up" ? fb.createUserWithEmailAndPassword : fb.signInWithEmailAndPassword)(fb.auth, email, password);
+      signedIn();
+    } catch (err) {
+      $("auth-msg").textContent = authError(err);
+    } finally {
+      $("auth-submit").disabled = false;
+    }
   });
-  sb.auth.onAuthStateChange((event, session) => {
-    const before = user?.id;
-    user = session?.user || null;
-    if (event !== "INITIAL_SESSION" && user?.id === before) return;   // token refresh etc.
-    // Supabase calls made inside this callback can deadlock; run them after it.
-    setTimeout(async () => {
-      if (user) { await adoptLocalHistory(); if (event === "SIGNED_IN") toast("Signed in. Your history is saved to your account."); }
-      renderAccount();
-      await refreshHistory();
-    }, 0);
+  // Fires once on load (with the remembered user, or null) and on every sign-in/out.
+  fb.onAuthStateChanged(fb.auth, async (u) => {
+    user = u;
+    if (user) await adoptLocalHistory();
+    renderAccount();
+    await refreshHistory();
   });
+  renderAccount();
 }
 
 // ---------- rubric rail ----------
@@ -1970,8 +2004,7 @@ function renderReport(report, delta, trace) {
   card.scrollIntoView({ behavior: "smooth", block: "start" });
 }
 
-renderAccount();
-if (!sb) refreshHistory();   // with accounts on, the auth listener loads it once the session is known
+initAccounts();   // loads history too: from the account once sign-in state is known, else this browser
 </script>
 </body>
 </html>

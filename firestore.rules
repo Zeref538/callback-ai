@@ -1,0 +1,21 @@
+rules_version = '2';
+
+// Paste into the Firebase console: Firestore Database -> Rules -> Publish.
+// These rules are the only thing stopping one user reading another's
+// interviews, because the page talks to Firestore directly. Anything not
+// matched below is denied.
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /users/{uid}/interviews/{interviewId} {
+      allow read, delete: if request.auth != null && request.auth.uid == uid;
+
+      // Exactly the two fields the page writes, with a size cap so one account
+      // can't fill the free quota. Firestore's own limit is 1 MiB a document.
+      allow create: if request.auth != null && request.auth.uid == uid
+        && request.resource.data.keys().hasOnly(['json', 'created_at'])
+        && request.resource.data.json is string
+        && request.resource.data.json.size() < 900000
+        && request.resource.data.created_at is int;
+    }
+  }
+}

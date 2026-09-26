@@ -190,7 +190,7 @@ moving sessions to shared storage.
   (the UI warns before you leave). Fine for a single-user demo; needs shared
   storage (Redis) for concurrency and resumable sessions.
 - The rubric cache is a local file, so it resets on an ephemeral PaaS redeploy.
-  Interview history lives in the browser, or in Supabase for signed-in users.
+  Interview history lives in the browser, or in Firebase (Firestore) for signed-in users.
 - Portfolio parsing is best-effort HTML; JS-rendered sites won't parse.
 - Scanned/image-only PDFs are detected and reported (true OCR needs a system
   Tesseract install, deliberately not bundled).
