@@ -45,10 +45,10 @@ async def rate_limit(request: Request, call_next):
 
 # Added after the rate limiter so it wraps it: a 429 still carries CORS headers
 # and the browser shows the real message instead of a vague network error.
-# The frontend is also served from Vercel/Netlify, a different origin than this API.
+# The frontend is also served from Netlify, a different origin than this API.
 app.add_middleware(
     CORSMiddleware,
-    allow_origin_regex=r"https://callback-ai[\w-]*\.(vercel|netlify)\.app",
+    allow_origin_regex=r"https://callback-ai[\w-]*\.netlify\.app",
     allow_methods=["*"],
     allow_headers=["*"],
 )

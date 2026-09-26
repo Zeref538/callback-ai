@@ -1,0 +1,4 @@
+# Netlify reads this on every deploy. The page is one static file, so there is
+# nothing to build; Netlify just serves the web/ folder as-is.
+[build]
+  publish = "web"
