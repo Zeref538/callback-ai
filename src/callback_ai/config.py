@@ -14,12 +14,13 @@ class Settings:
 
     nim_api_key: str = os.getenv("NIM_API_KEY", "")
     nim_base_url: str = os.getenv("NIM_BASE_URL", "https://integrate.api.nvidia.com/v1")
-    # 8B by default: on NIM's free tier the 70B sits in a serverless queue and
-    # took ~55-110s per call in testing, vs ~0.4-1.6s for the 8B, which is the
-    # difference between an interactive interview and an unusable one. The 8B is
-    # plenty for question generation and scoring. Set NIM_MODEL to the 70B if you
-    # want higher-quality grading and can tolerate the latency.
-    nim_model: str = os.getenv("NIM_MODEL", "meta/llama-3.1-8b-instruct")
+    # NVIDIA retired meta/llama-3.1-8b-instruct on 2026-08-26 (every call then
+    # returned 410 Gone). On 2026-09-26 most models in NIM's /v1/models list
+    # answered 404; of the ones that responded, Llama 3.2 11B parsed the same job
+    # post into the same 8 competencies on 3 of 3 runs (~12s each), while
+    # nemotron-3-super varied between 6 and 8 and took 10-32s. Consistency matters
+    # here: the rubric cache and the "vs last time" delta assume it.
+    nim_model: str = os.getenv("NIM_MODEL", "meta/llama-3.2-11b-vision-instruct")
     ollama_host: str = os.getenv("OLLAMA_HOST", "http://localhost:11434")
     ollama_model: str = os.getenv("OLLAMA_MODEL", "llama3.1")
 
