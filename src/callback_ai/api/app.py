@@ -5,7 +5,7 @@ from pathlib import Path
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 
 from callback_ai.api.routes.session import router as session_router
@@ -40,6 +40,20 @@ async def rate_limit(request: Request, call_next):
         if len(_hits) > 2000:
             for k in [k for k, v in _hits.items() if not v or now - v[-1] > 60]:
                 _hits.pop(k, None)
+    return await call_next(request)
+
+
+# The page is served from Netlify. On Render (which sets RENDER=true) this
+# server is API-only, and anyone following an old onrender.com link is sent to
+# the real page instead of a stale copy. 302, not 301: browsers cache a 301
+# forever, so it could never be undone. Locally the page is still served below.
+FRONTEND_URL = "https://callback-ai.netlify.app"
+
+
+@app.middleware("http")
+async def page_lives_on_netlify(request: Request, call_next):
+    if os.getenv("RENDER") and not request.url.path.startswith("/api/"):
+        return RedirectResponse(FRONTEND_URL, status_code=302)
     return await call_next(request)
 
 
