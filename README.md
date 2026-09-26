@@ -1,9 +1,9 @@
 # callback-ai
 
-
+### ▶︎ [Live app — callback-ai.netlify.app](https://callback-ai.netlify.app)
 
 [![CI](https://github.com/Zeref538/callback-ai/actions/workflows/ci.yml/badge.svg)](https://github.com/Zeref538/callback-ai/actions/workflows/ci.yml)
-[![Live](https://img.shields.io/badge/demo-live-46E3B7?logo=render&logoColor=white)](https://callback-ai.onrender.com)
+[![Live](https://img.shields.io/badge/app-live-00C7B7?logo=netlify&logoColor=white)](https://callback-ai.netlify.app)
 &nbsp;·&nbsp; 90 tests ·&nbsp; Python 3.11+ ·&nbsp; FastAPI
 
 > The live demo runs on Render's free tier, so the **first request after idle
