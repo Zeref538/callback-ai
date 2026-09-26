@@ -35,7 +35,7 @@ def test_txt_bad_bytes_dont_crash():
 
 def test_docx_reads_paragraphs_and_tables():
     data = _make_docx(
-        ["Jane Doe — Backend Engineer", "Built a Redis retry layer."],
+        ["Jane Doe, Backend Engineer", "Built a Redis retry layer."],
         table_rows=[["Skill", "Level"], ["Python", "Expert"]],
     )
     text = extract_text("resume.docx", data)

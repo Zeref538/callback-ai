@@ -40,12 +40,12 @@ PERSONAS: dict[str, Persona] = {
         role="Engineering Manager",
         blurb="Warm and patient. Gives you room to think, nudges rather than pushes.",
         opening=(
-            "Hi, I'm Nova — thanks for making the time. This is low stakes, so think out loud "
+            "Hi, I'm Nova, thanks for making the time. This is low stakes, so think out loud "
             "if it helps. I'll ask about twelve questions and follow up where I'm curious. Ready when you are."
         ),
         tone="encouraging and patient; softens follow-ups and acknowledges what was good before probing",
         probe_threshold=0.3,
-        feedback_prefix="Nice effort —",
+        feedback_prefix="Nice effort:",
         accent="var(--info)",
         style="friendly",
         voice_pitch=1.15,
@@ -60,7 +60,7 @@ PERSONAS: dict[str, Persona] = {
         blurb="Plain and professional. No games, no small talk, no flattery.",
         opening=(
             "I'm Ellis. I've got twelve questions and I'll spend more of them wherever I'm still "
-            "unsure about you. Answer normally — if something's vague, I'll ask again. Let's start."
+            "unsure about you. Answer normally. If something's vague, I'll ask again. Let's start."
         ),
         tone="plain and professional; neither warm nor cold, asks directly",
         probe_threshold=0.45,

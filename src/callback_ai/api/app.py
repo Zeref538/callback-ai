@@ -34,7 +34,7 @@ async def rate_limit(request: Request, call_next):
         while dq and now - dq[0] > 60:
             dq.popleft()
         if len(dq) >= RATE_LIMIT_PER_MIN:
-            return JSONResponse(status_code=429, content={"detail": "Too many requests — give it a moment and try again."})
+            return JSONResponse(status_code=429, content={"detail": "Too many requests. Give it a moment and try again."})
         dq.append(now)
         # Opportunistically drop idle IPs so the dict can't grow unbounded.
         if len(_hits) > 2000:

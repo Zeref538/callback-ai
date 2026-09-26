@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>callback-ai — adaptive interview simulator</title>
+<title>callback-ai: adaptive interview simulator</title>
 <meta name="color-scheme" content="dark light">
 <!-- SVG favicon: the callback mark on an emerald tile, matches the in-app logo -->
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%2310b981'/%3E%3Cpath d='M13 13l-4 4 4 4' fill='none' stroke='%23052e1b' stroke-width='2.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3Cpath d='M9 17h9a5 5 0 0 0 5-5V9' fill='none' stroke='%23052e1b' stroke-width='2.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
@@ -629,7 +629,7 @@ details[open] > summary .disclosure svg { transform: rotate(90deg); }
       </div>
     </div>
 
-    <div class="side-foot">Practice tool — scores are an LLM's read of your answers, not a hiring decision.</div>
+    <div class="side-foot">Practice tool. Scores are an LLM's read of your answers, not a hiring decision.</div>
   </aside>
 
   <div class="main">
@@ -646,7 +646,7 @@ details[open] > summary .disclosure svg { transform: rotate(90deg); }
         <div class="hero">
           <p class="eyebrow" style="margin-bottom:.75rem">Mock interviews that push back</p>
           <h1>Most prep tools ask questions.<br><em>Ours asks again.</em></h1>
-          <p>Say <em style="font-style:normal;color:var(--foreground)">"I improved performance"</em> and the next question is <em style="font-style:normal;color:var(--foreground)">by how much</em> — and how you measured it. That follow-up is where real interviews are won or lost, so it's where this one lives: it keeps pressing on your weakest answers, and every score is quoted back in your own words.</p>
+          <p>Say <em style="font-style:normal;color:var(--foreground)">"I improved performance"</em> and the next question is <em style="font-style:normal;color:var(--foreground)">by how much</em>, and how you measured it. That follow-up is where real interviews are won or lost, so it's where this one lives: it keeps pressing on your weakest answers, and every score is quoted back in your own words.</p>
         </div>
 
         <form class="card" id="setup-form" novalidate>
@@ -721,7 +721,7 @@ details[open] > summary .disclosure svg { transform: rotate(90deg); }
           </div>
 
           <div class="field" style="margin-bottom:1.1rem">
-            <label style="display:block;margin-bottom:.5rem">Target level <span style="color:var(--muted-fg);font-weight:400">— how hard they press</span></label>
+            <label style="display:block;margin-bottom:.5rem">Target level <span style="color:var(--muted-fg);font-weight:400">(how hard they press)</span></label>
             <div class="seg" role="group" aria-label="Target seniority">
               <button type="button" class="seg-btn" data-seniority="junior">Junior</button>
               <button type="button" class="seg-btn" data-seniority="mid" aria-pressed="true">Mid</button>
@@ -756,7 +756,7 @@ details[open] > summary .disclosure svg { transform: rotate(90deg); }
           <div class="meta-controls">
             <button type="button" id="skip-btn" class="pill">
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m5 4 10 8-10 8V4zM19 5v14"/></svg>
-              Skip — not sure
+              Skip, not sure
             </button>
             <button type="button" id="voice-toggle" class="pill hidden" aria-pressed="false">
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5 6 9H2v6h4l5 4V5z"/><path class="wave" d="M15.5 8.5a5 5 0 0 1 0 7M19 5a9 9 0 0 1 0 14"/></svg>
@@ -780,7 +780,7 @@ details[open] > summary .disclosure svg { transform: rotate(90deg); }
 <div class="modal-scrim hidden" id="modal-scrim">
   <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title">
     <h3 id="modal-title">Leave this interview?</h3>
-    <p id="modal-body">You're mid-session — your progress won't be saved.</p>
+    <p id="modal-body">You're mid-session. Your progress won't be saved.</p>
     <div class="modal-actions">
       <button class="btn-outline" id="modal-cancel" style="flex:0 0 auto">Stay</button>
       <button class="btn-danger" id="modal-confirm">Leave</button>
@@ -792,7 +792,7 @@ details[open] > summary .disclosure svg { transform: rotate(90deg); }
 <div class="modal-scrim hidden" id="auth-scrim">
   <div class="modal" role="dialog" aria-modal="true" aria-labelledby="auth-title">
     <h3 id="auth-title">Sign in</h3>
-    <p>Keep your interview history on any device. It's optional — you can keep practising as a guest.</p>
+    <p>Keep your interview history on any device. It's optional. You can keep practising as a guest.</p>
     <button class="btn-outline auth-google" id="auth-google" type="button">
       <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><path fill="#4285F4" d="M22.6 12.2c0-.8-.1-1.5-.2-2.2H12v4.2h5.9a5 5 0 0 1-2.2 3.3v2.7h3.6c2.1-1.9 3.3-4.8 3.3-8z"/><path fill="#34A853" d="M12 23c3 0 5.5-1 7.3-2.7l-3.6-2.8c-1 .7-2.2 1.1-3.7 1.1-2.9 0-5.3-1.9-6.2-4.5H2.1v2.8A11 11 0 0 0 12 23z"/><path fill="#FBBC05" d="M5.8 14.1a6.6 6.6 0 0 1 0-4.2V7.1H2.1a11 11 0 0 0 0 9.8z"/><path fill="#EA4335" d="M12 5.4c1.6 0 3.1.6 4.2 1.7l3.2-3.2A11 11 0 0 0 2.1 7.1l3.7 2.8C6.7 7.3 9.1 5.4 12 5.4z"/></svg>
       Continue with Google
@@ -988,7 +988,7 @@ if (voice.supportedTTS) { loadVoices(); speechSynthesis.onvoiceschanged = loadVo
 // Rank the available browser voices and pick the best match for the
 // interviewer's gender hint. The default SAPI voices (David/Zira) sound
 // robotic; Edge/Chrome ship far more natural network voices ("...Online
-// (Natural)", Google, Apple's premium/Siri) — those are what makes this
+// (Natural)", Google, Apple's premium/Siri). Those are what makes this
 // sound like a person, so quality is weighted above the gender hint.
 // If the user has hand-picked a voice, that always wins.
 const NATURAL_RE = /natural|neural|online|premium|enhanced|siri|journey|google\s?(uk|us)?\s?english/i;
@@ -1085,7 +1085,7 @@ function ensureVizBars() {
   return viz;
 }
 
-// TTS speaking indicator — CSS-animated bars (we can't tap synth output).
+// TTS speaking indicator: CSS-animated bars (we can't tap synth output).
 function showSpeaking(on) {
   const viz = ensureVizBars();
   if (!on) { if (!micMeter) viz.classList.add("hidden"); return; }  // mic meter, if live, keeps it shown
@@ -1096,7 +1096,7 @@ function showSpeaking(on) {
   viz.classList.remove("hidden");
 }
 
-// Real mic-level meter — drives the same bars from live audio amplitude while
+// Real mic-level meter. Drives the same bars from live audio amplitude while
 // you answer by voice (browsers DO allow tapping a getUserMedia stream).
 let micMeter = null;
 function startMicMeter(stream) {
@@ -1171,7 +1171,7 @@ function initRecognizer() {
     const msg = {
       "not-allowed": "Microphone blocked. Click the mic/lock icon in the address bar, allow the mic for this site, then try again.",
       "service-not-allowed": "Microphone blocked by the browser or OS. Check your privacy settings.",
-      "audio-capture": "No microphone found — plug one in or check your input device.",
+      "audio-capture": "No microphone found. Plug one in or check your input device.",
       "network": "Speech recognition needs a network connection.",
     }[e.error] || `Mic error: ${e.error}`;
     toast(msg, true);
@@ -1187,9 +1187,9 @@ function initRecognizer() {
 
 async function startMic() {
   if (!voice.recognizer) voice.recognizer = initRecognizer();
-  if (!voice.recognizer) { toast("Voice answers need Chrome or Edge — this browser doesn't support them.", true); return; }
+  if (!voice.recognizer) { toast("Voice answers need Chrome or Edge. This browser doesn't support them.", true); return; }
   // Explicitly request the mic first. SpeechRecognition alone often never
-  // shows a permission prompt (so it silently does nothing) — getUserMedia
+  // shows a permission prompt (so it silently does nothing); getUserMedia
   // reliably triggers it and confirms a device exists. We keep the stream to
   // drive the live level meter; recognition opens its own capture.
   if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
@@ -1206,7 +1206,7 @@ async function startMic() {
   try {
     voice.recognizer.start();
   } catch (err) {
-    if (err.name !== "InvalidStateError") { micWanted = false; toast(`Couldn't start the mic — ${err.message}`, true); }
+    if (err.name !== "InvalidStateError") { micWanted = false; toast(`Couldn't start the mic: ${err.message}`, true); }
   }
 }
 
@@ -1283,7 +1283,7 @@ wireUpload("upload-resume", "resume-file", "resume", "Resume");
 
 // ---------- sample ----------
 const SAMPLE = {
-  jobPost: `Backend Engineer (Mid-level) — Payments Team
+  jobPost: `Backend Engineer (Mid-level), Payments Team
 
 We're looking for a backend engineer to join our payments infrastructure team.
 You'll design and operate services that process millions of transactions a day,
@@ -1297,7 +1297,7 @@ Responsibilities:
 
 We value engineers who communicate tradeoffs clearly to non-technical
 stakeholders and who mentor junior teammates.`,
-  resume: `Jane Doe — Backend Engineer
+  resume: `Jane Doe, Backend Engineer
 
 Projects:
 - Payments retry service: built an idempotent retry layer for failed payment
@@ -1341,7 +1341,7 @@ async function addHistory(entry) {
     const { error } = await sb.from("interviews").insert(toRow(entry));
     if (!error) return;
     // Keep it on this device so it isn't lost; it's uploaded on next sign-in.
-    toast("Couldn't reach your account — saved on this device for now.", true);
+    toast("Couldn't reach your account. Saved on this device for now.", true);
   }
   saveLocal([entry, ...loadLocal()]);
 }
@@ -1388,7 +1388,7 @@ $("clear-history").onclick = async () => {
     });
     if (!ok) return;
     const { error } = await sb.from("interviews").delete().eq("user_id", user.id);
-    if (error) { toast("Couldn't delete — try again.", true); return; }
+    if (error) { toast("Couldn't delete. Try again.", true); return; }
   } else {
     localStorage.removeItem(HISTORY_KEY);
   }
@@ -1466,7 +1466,7 @@ if (sb) {
     if (event !== "INITIAL_SESSION" && user?.id === before) return;   // token refresh etc.
     // Supabase calls made inside this callback can deadlock; run them after it.
     setTimeout(async () => {
-      if (user) { await adoptLocalHistory(); if (event === "SIGNED_IN") toast("Signed in — your history is saved to your account."); }
+      if (user) { await adoptLocalHistory(); if (event === "SIGNED_IN") toast("Signed in. Your history is saved to your account."); }
       renderAccount();
       await refreshHistory();
     }, 0);
@@ -1521,7 +1521,7 @@ function startQTimer() {
   const tick = () => {
     const s = Math.floor((Date.now() - qStart) / 1000);
     el.textContent = `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
-    el.classList.toggle("slow", s >= 90);   // amber past 90s — real interviews want tighter
+    el.classList.toggle("slow", s >= 90);   // amber past 90s; real interviews want tighter
   };
   tick();
   qTimer = setInterval(tick, 1000);
@@ -1565,7 +1565,7 @@ function bubbleFeedback(feedbackText, lowConfidence) {
         ${verdict}
       </div>
       <span class="msg"></span>
-      ${lowConfidence ? '<span class="fb-note">Low confidence — could not verify this against your answer.</span>' : ""}
+      ${lowConfidence ? '<span class="fb-note">Low confidence: could not verify this against your answer.</span>' : ""}
     </div>`;
   div.querySelector(".msg").textContent = message;
   els.transcript.appendChild(div);
@@ -1617,7 +1617,7 @@ $("setup-form").addEventListener("submit", async (e) => {
       const n = document.createElement("div");
       n.className = "notice";
       n.style.cssText = "border-color:color-mix(in oklch, var(--warning) 40%, transparent);background:color-mix(in oklch, var(--warning) 8%, transparent)";
-      n.textContent = `${data.conflicts} conflicting claim(s) between your resume and portfolio — fair game for follow-ups.`;
+      n.textContent = `${data.conflicts} conflicting claim(s) between your resume and portfolio. Fair game for follow-ups.`;
       els.transcript.appendChild(n);
     }
 
@@ -1648,7 +1648,7 @@ els.answerForm.addEventListener("submit", async (e) => {
   stopQTimer();
   stopListening();  // hard-stop dictation so the captured text submits cleanly
 
-  // Text stays in the box until the request succeeds — a failure used to eat it.
+  // Text stays in the box until the request succeeds; a failure used to eat it.
   const pending = bubbleAnswer(answer);
   els.sendBtn.disabled = true;
   els.answerInput.disabled = true;
@@ -1672,7 +1672,7 @@ els.answerForm.addEventListener("submit", async (e) => {
       await loadReport();
     } else {
       // Same competency two turns running = the agent is probing deeper, not
-      // moving on — surface that as a "following up" tag on the next question.
+      // moving on; surface that as a "following up" tag on the next question.
       const followup = data.next_competency === state.currentCompetency;
       state.turn = data.turn + 1;
       state.currentCompetency = data.next_competency;
@@ -1683,7 +1683,7 @@ els.answerForm.addEventListener("submit", async (e) => {
   } catch (err) {
     pending.remove();
     typingIndicator(false);
-    toast(`${err.message} Your answer is still in the box — press send to retry.`, true);
+    toast(`${err.message} Your answer is still in the box. Press send to retry.`, true);
   } finally {
     els.sendBtn.disabled = false;
     els.answerInput.disabled = false;
@@ -1712,7 +1712,7 @@ $("new-session-btn").onclick = async () => {
   if (state.sessionId && !state.report) {
     const leave = await showConfirm({
       title: "Leave this interview?",
-      body: "You're mid-session — your progress won't be saved.",
+      body: "You're mid-session. Your progress won't be saved.",
       confirmLabel: "Leave", cancelLabel: "Stay",
     });
     if (!leave) return;
@@ -1729,7 +1729,7 @@ async function loadReport() {
   if (!resp.ok) { toast("Could not load the report.", true); return; }
   const data = await resp.json();
   // The agent trace (its turn-by-turn decisions) is a separate, best-effort
-  // fetch — the report shouldn't fail if the trace can't be built.
+  // fetch; the report shouldn't fail if the trace can't be built.
   let trace = null;
   try { const tr = await fetch(`${API}/sessions/${state.sessionId}/trace`); if (tr.ok) trace = (await tr.json()).trace; } catch {}
   renderReport(data.report, data.delta, trace);
@@ -1758,12 +1758,12 @@ function renderReportFromHistory(item) {
 const VERDICT_LINE = {
   callback: { headline: "You'd get the callback", sub: "Specific, evidenced answers across the board. Keep the receipts handy." },
   maybe:    { headline: "It'd be a close call", sub: "Enough substance to stay in the room, not enough to be the obvious yes." },
-  no:       { headline: "Not a callback yet", sub: "The stories are there — the specifics aren't. That's a fixable problem." },
+  no:       { headline: "Not a callback yet", sub: "The stories are there. The specifics aren't. That's a fixable problem." },
 };
 
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 
-// A radar chart of per-competency scores — one glance shows the shape of a
+// A radar chart of per-competency scores: one glance shows the shape of a
 // candidate (spiky = uneven, round = well-rounded). Hand-rolled SVG, no lib.
 function buildRadar(reports) {
   const n = reports.length;
@@ -1807,7 +1807,7 @@ function trendChip(d) {
   return `<span class="trend" title="was ${d.previous.toFixed(2)} last time" style="color:${col};border-color:color-mix(in oklch, ${col} 35%, transparent)">${arrow} ${sign}${d.delta.toFixed(2)} vs last</span>`;
 }
 
-// The agent trace: makes the "agentic" claim visible — each turn shows which
+// The agent trace: makes the "agentic" claim visible. Each turn shows which
 // competency it chose, what it scored, and whether it pressed deeper or moved on.
 const ACTION_LABEL = {
   probe:   { text: "pressed deeper", color: "var(--warning)", icon: "↳" },
@@ -1822,7 +1822,7 @@ function buildTrace(trace) {
       ? `<span class="trace-score" style="color:${bandColor(t.score)}">${t.score.toFixed(2)}</span>` : "";
     return `<li class="trace-row">
       <span class="trace-turn">${t.turn}</span>
-      <span class="trace-comp" title="${esc(t.competency || "")}">${esc(t.competency || "—")}</span>
+      <span class="trace-comp" title="${esc(t.competency || "")}">${esc(t.competency || "-")}</span>
       ${score}
       <span class="trace-act" style="color:${a.color}">${a.icon} ${a.text}</span>
     </li>`;
@@ -1832,10 +1832,10 @@ function buildTrace(trace) {
   d.style.marginTop = "1rem";
   d.innerHTML = `<summary><span class="disclosure" style="font-weight:500;color:var(--foreground)">
       <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="m9 18 6-6-6-6"/></svg>
-      How the agent ran — its decisions, turn by turn
+      How the agent ran: its decisions, turn by turn
     </span></summary>
     <ul class="trace-list">${rows}</ul>
-    <p class="hint" style="margin-top:.6rem">The agent re-decides after every answer: it probes a weak answer on the same competency, and moves on once it has enough signal — spending its 12 questions where it's least sure.</p>`;
+    <p class="hint" style="margin-top:.6rem">The agent re-decides after every answer: it probes a weak answer on the same competency, and moves on once it has enough signal, spending its 12 questions where it's least sure.</p>`;
   return d;
 }
 
@@ -1912,7 +1912,7 @@ function renderReport(report, delta, trace) {
       </div>
       <div class="meter"><div class="meter-fill" style="background:${bandColor(r.score)}"></div></div>
       <p class="quote"></p>
-      ${r.low_confidence ? '<p class="hint">Low confidence — evidence could not be fully verified.</p>' : ""}`;
+      ${r.low_confidence ? '<p class="hint">Low confidence: evidence could not be fully verified.</p>' : ""}`;
     item.querySelector(".comp-card-name").textContent = r.competency;
     item.querySelector(".quote").textContent = `“${r.evidence_quote}”`;
 

@@ -47,5 +47,5 @@ def extract_text(filename: str, data: bytes) -> str:
     if name.endswith((".txt", ".md", ".text")):
         return data.decode("utf-8", errors="replace").strip()
     if name.endswith(".doc"):
-        raise UnsupportedDocument("Legacy .doc isn't supported — save as .docx or paste the text.")
+        raise UnsupportedDocument("Legacy .doc isn't supported. Save as .docx or paste the text.")
     raise UnsupportedDocument(f"Can't read {filename!r}. Upload a PDF, DOCX, TXT, or MD file.")

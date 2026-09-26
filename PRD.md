@@ -1,4 +1,4 @@
-# PRD — Adaptive Interview Simulator Agent
+# PRD: Adaptive Interview Simulator Agent
 
 **Status:** draft · **Target start:** August 2026 · **Est. effort:** ~4 weeks
 part-time · **Name:** TBD
@@ -10,8 +10,8 @@ part-time · **Name:** TBD
 Interview-prep tools ask canned questions from a static list. Real interviewers
 do two things those tools don't:
 
-1. **They probe.** A vague answer earns a follow-up — *"you said you improved
-   performance; by how much, and how did you measure it?"* — and that follow-up
+1. **They probe.** A vague answer earns a follow-up (*"you said you improved
+   performance; by how much, and how did you measure it?"*), and that follow-up
    is where candidates actually get filtered.
 2. **They budget.** An interviewer has ~12 questions and spends them where they
    are still uncertain about the candidate, not evenly across a checklist.
@@ -22,12 +22,12 @@ because most LLM graders over-praise and cite nothing.
 
 ## 2. Goals
 
-- Run an interview that **adapts** — question selection driven by a rubric
+- Run an interview that **adapts**: question selection driven by a rubric
   derived from the specific job post, and by what the candidate has already
   revealed.
 - Grade with **evidence**: every score cites a verbatim quote from the
   transcript.
-- Show **improvement over time** — weak competencies persist across sessions
+- Show **improvement over time**: weak competencies persist across sessions
   and future sessions target them.
 
 ### Non-goals (v1)
@@ -35,22 +35,22 @@ because most LLM graders over-praise and cite nothing.
 - Not a job board, resume rewriter, or career platform.
 - No user accounts, teams, or multi-user features.
 - No video/body-language analysis.
-- Not a hiring tool — this evaluates practice answers for the candidate's own
+- Not a hiring tool. This evaluates practice answers for the candidate's own
   use, never real applicants.
 
 ## 3. Users
 
 | user | need |
 |---|---|
-| **Primary — job-seeking student/junior engineer (me)** | Realistic practice for a specific role, with feedback specific enough to act on |
-| Secondary — recruiter/hiring manager viewing the portfolio | Understand in 60 seconds what this is and that it works |
+| **Primary: job-seeking student/junior engineer (me)** | Realistic practice for a specific role, with feedback specific enough to act on |
+| Secondary: recruiter/hiring manager viewing the portfolio | Understand in 60 seconds what this is and that it works |
 
 ## 4. User stories
 
 1. As a candidate, I paste a job post and my resume, and get an interview
    tailored to *that* role rather than generic questions.
-2. As a candidate, when I give a vague answer, I get pushed on it — like a real
-   interviewer would — so I learn to answer with specifics.
+2. As a candidate, when I give a vague answer, I get pushed on it, like a real
+   interviewer would, so I learn to answer with specifics.
 3. As a candidate, I want scores I can trust, so each one must point at what I
    actually said.
 4. As a candidate, I want to know what a stronger version of my answer sounds
@@ -64,7 +64,7 @@ because most LLM graders over-praise and cite nothing.
 - **FR-1** Parse a job post into weighted competencies (technical areas,
   seniority bar, soft skills) as validated JSON.
 - **FR-2** Parse the resume into a claim inventory (projects, metrics, tech)
-  the interviewer can reference by name — e.g. probing a stated metric.
+  the interviewer can reference by name, e.g. probing a stated metric.
 - **FR-3** Same job post → same rubric (cached); different job post →
   measurably different rubric.
 
@@ -94,7 +94,7 @@ because most LLM graders over-praise and cite nothing.
 ### 5.5 Interfaces
 - **FR-16** CLI for a full text session.
 - **FR-17** Minimal web UI (terminal-styled, consistent with portfolio).
-- **FR-18** *(stretch)* Voice mode — speak answers, transcribed locally.
+- **FR-18** *(stretch)* Voice mode: speak answers, transcribed locally.
 
 ## 6. Non-functional requirements
 
@@ -139,7 +139,7 @@ Ship criteria tiers:
 | risk | mitigation |
 |---|---|
 | Grader flatters (LLM over-praise) | Calibrate against hand-written weak-answer set; add per-band anchor examples to the rubric prompt |
-| Probing feels like a quiz | Probe policy is the core product — build and test it in week 2, not last |
+| Probing feels like a quiz | Probe policy is the core product. Build and test it in week 2, not last |
 | Free-tier rate limits | Cache rubrics, keep sessions short, local Ollama for the high-frequency coverage call |
 | Scope creep into a career platform | Non-goals section is binding; v1 = one job post, one session, one report |
 | Resume PII in prompts | Document exactly what leaves the machine; offer a redaction toggle |
@@ -149,7 +149,7 @@ Ship criteria tiers:
 - Question budget: fixed at 12, or scaled by role seniority?
 - Should the agent simulate interviewer *personas* (friendly vs adversarial),
   or is one neutral interviewer enough for v1?
-- Voice mode in v1 or deferred — does typing answers undermine realism enough
+- Voice mode in v1 or deferred? Does typing answers undermine realism enough
   to justify the extra scope?
 
 ## 11. Stack

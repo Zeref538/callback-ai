@@ -24,12 +24,12 @@ def mock_client(tmp_path, monkeypatch):
     return TestClient(app_module.app), session_routes
 
 
-JOB = """Backend Engineer — Payments
+JOB = """Backend Engineer, Payments
 Design services that process millions of transactions a day. Idempotency and
 data consistency under failure are essential. Debug production incidents and
 write postmortems. Mentor junior teammates and communicate tradeoffs.
 """
-RESUME = """Jane Doe — Backend Engineer
+RESUME = """Jane Doe, Backend Engineer
 - Built an idempotent retry service for payment webhooks with Redis locks.
   Reduced duplicate-charge incidents by 30% over one quarter.
 Skills: Python, Go, PostgreSQL, Redis.

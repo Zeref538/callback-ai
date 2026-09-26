@@ -134,7 +134,7 @@ def start_session(req: StartSessionRequest) -> StartSessionResponse:
         # the "job post" has no substance for the model to weigh.
         raise HTTPException(
             status_code=422,
-            detail="Couldn't find any competencies to interview on — paste a fuller job description.",
+            detail="Couldn't find any competencies to interview on. Paste a fuller job description.",
         )
     inventory = merge_claims(resume_claims, portfolio_claims)
 

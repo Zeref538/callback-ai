@@ -1,4 +1,4 @@
-# 0001 — Optional accounts with Supabase
+# 0001: Optional accounts with Supabase
 
 **Status:** accepted, 2026-09-26
 
