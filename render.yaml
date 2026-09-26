@@ -15,7 +15,7 @@ services:
       - key: CALLBACK_AI_PROVIDER
         value: nim
       - key: NIM_MODEL
-        value: meta/llama-3.2-11b-vision-instruct
+        value: nvidia/nemotron-3-super-120b-a12b
       - key: WEB_CONCURRENCY
         value: "1"        # sessions are in-process; a 2nd worker can't see them
       - key: RATE_LIMIT_PER_MIN

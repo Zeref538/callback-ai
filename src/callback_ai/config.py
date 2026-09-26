@@ -16,11 +16,13 @@ class Settings:
     nim_base_url: str = os.getenv("NIM_BASE_URL", "https://integrate.api.nvidia.com/v1")
     # NVIDIA retired meta/llama-3.1-8b-instruct on 2026-08-26 (every call then
     # returned 410 Gone). On 2026-09-26 most models in NIM's /v1/models list
-    # answered 404; of the ones that responded, Llama 3.2 11B parsed the same job
-    # post into the same 8 competencies on 3 of 3 runs (~12s each), while
-    # nemotron-3-super varied between 6 and 8 and took 10-32s. Consistency matters
-    # here: the rubric cache and the "vs last time" delta assume it.
-    nim_model: str = os.getenv("NIM_MODEL", "meta/llama-3.2-11b-vision-instruct")
+    # answered 404; two responded. Llama 3.2 11B returned invalid JSON (single-
+    # quoted strings, placeholder values copied verbatim) on 3 of 3 resume parses,
+    # which failed every session that included a resume. Nemotron 3 Super parsed
+    # it correctly 3 of 3 times and ran a full interview. It is slower (~23s to
+    # start, 8-25s per answer vs ~1s before) and its job-post rubric varies run to
+    # run, which the rubric cache absorbs by reusing the first parse per post.
+    nim_model: str = os.getenv("NIM_MODEL", "nvidia/nemotron-3-super-120b-a12b")
     ollama_host: str = os.getenv("OLLAMA_HOST", "http://localhost:11434")
     ollama_model: str = os.getenv("OLLAMA_MODEL", "llama3.1")
 

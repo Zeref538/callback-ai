@@ -80,7 +80,7 @@ budget ceiling, and persona-invariant scoring.
 ## Measured quality (live NVIDIA NIM · Llama 3.1 8B)
 
 > Measured on Llama 3.1 8B, which NVIDIA retired on 26 Aug 2026. The live app
-> now runs Llama 3.2 11B; these numbers have not been re-measured on it yet.
+> now runs Nemotron 3 Super; these numbers have not been re-measured on it yet.
 
 Real numbers from `eval/`, run against a live model, not aspirational:
 
