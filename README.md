@@ -1,10 +1,10 @@
 # callback-ai
 
-### ▶︎ [Live app: callback-ai.netlify.app](https://callback-ai.netlify.app)
+### ▶︎ [Live app: callback-ai.netlify.app](https://callback-ai.netlify.app) &nbsp;·&nbsp; [Case study](https://zeref538.github.io/callback-ai/)
 
 [![CI](https://github.com/Zeref538/callback-ai/actions/workflows/ci.yml/badge.svg)](https://github.com/Zeref538/callback-ai/actions/workflows/ci.yml)
 [![Live](https://img.shields.io/badge/app-live-00C7B7?logo=netlify&logoColor=white)](https://callback-ai.netlify.app)
-&nbsp;·&nbsp; 90 tests ·&nbsp; Python 3.11+ ·&nbsp; FastAPI
+&nbsp;·&nbsp; 105 tests ·&nbsp; Python 3.11+ ·&nbsp; FastAPI
 
 > The page loads instantly from Netlify. The API runs on Render's free tier, so
 > the **first interview after a quiet spell can take ~50s** while it wakes up.
@@ -77,24 +77,28 @@ budget ceiling, and persona-invariant scoring.
 
 ---
 
-## Measured quality (live NVIDIA NIM · Llama 3.1 8B)
+## Measured quality (live NVIDIA NIM · Nemotron 3 Super)
 
-> Measured on Llama 3.1 8B, which NVIDIA retired on 26 Aug 2026. The live app
-> now runs Nemotron 3 Super; these numbers have not been re-measured on it yet.
+Two full runs on 26 Sep 2026, saved in [`eval/results/`](eval/results/). The
+Llama 3.1 8B column is from July 2026; NVIDIA retired that model on 26 Aug 2026.
 
-Real numbers from `eval/`, run against a live model, not aspirational:
+| Metric | What it checks | Target | Llama 3.1 8B | **Nemotron, run 1 / run 2** |
+|---|---|---|---|---|
+| **Discrimination** | Spearman ρ between the agent's ranking and a human ranking of 10 graded answers | ρ ≥ 0.8 | 0.81 | **0.90 / 0.90** |
+| **Grading consistency** | Same answer re-graded 5× (temperature 0), std dev on a 10-pt scale | ≤ 1.0 | 0.0 | **0.32 / 0.33** |
+| **Probe precision** | Probe rate on vague / specific answers (2 of each) | ≥ 0.8 / ≤ 0.1 | 1.0 / 0.0 | **1.0 / 0.0 both runs** |
+| **Evidence-gate rejection** | Share of scores rejected for an unquotable claim | reported honestly | not yet summarised | logged per session (`session_end`) |
+| **Budget adaptivity** | Question share vs. a uniform baseline | measurably non-uniform | not yet summarised | pulled from session logs |
 
-| Metric | What it checks | Target | **Result** |
-|---|---|---|---|
-| **Discrimination** | Spearman ρ between the agent's ranking and a human ranking of 10 graded answers | ρ ≥ 0.8 | **0.81 ✅** |
-| **Grading consistency** | Same transcript re-graded 5× (temperature 0) | ≤ 1.0 pt / 10 | **0.0 ✅** |
-| **Probe precision** | Fires on vague answers, stays quiet on specific ones | ≥ 0.8 / ≤ 0.1 | **1.0 / 0.0 ✅** |
-| **Evidence-gate rejection** | Share of scores rejected for an unquotable claim | reported honestly | logged per session (`session_end`) |
-| **Budget adaptivity** | Question share vs. a uniform baseline | measurably non-uniform | pulled from session logs |
+**Read with care:** the sets are small (10 answers; 4 for probing), and ρ is
+rank-only. Every answer a human rated 3 to 6 was scored 2 or 3 by the agent in
+both runs, so mid-quality answers are graded too harshly. The
+[case study](https://zeref538.github.io/callback-ai/) plots it.
 
-Reproduce: `python -m eval.discrimination`, `python -m eval.grading_consistency`,
-`python -m eval.probe_precision` (need `NIM_API_KEY`). Every eval script is also
-unit-tested against a fake provider so the logic is verified without a key.
+Reproduce (needs `NIM_API_KEY`): `python -m eval.run_all <run-name>` writes
+`eval/results/<run-name>.json`; `python docs/build_site.py` rebuilds the case
+study from those files. Every eval script is also unit-tested against a fake
+provider, so the logic is verified without a key.
 
 ---
 
@@ -134,7 +138,7 @@ CLI instead of the browser:
   --persona  adversarial
 ```
 
-**Tests:** `.venv/Scripts/python -m pytest` runs **89 tests**, all against fake/mock
+**Tests:** `.venv/Scripts/python -m pytest` runs **105 tests**, all against fake/mock
 providers, so no key is needed to verify the logic.
 
 ---
