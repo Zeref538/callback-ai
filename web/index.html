@@ -1851,7 +1851,7 @@ const ACTION_LABEL = {
 function buildTrace(trace) {
   if (!trace || !trace.length) return null;
   const rows = trace.map((t) => {
-    const a = ACTION_LABEL[t.action] || { text: t.action || "asked", color: "var(--muted-fg)", icon: "•" };
+    const a = ACTION_LABEL[t.action] || { text: esc(t.action || "asked"), color: "var(--muted-fg)", icon: "•" };
     const score = typeof t.score === "number"
       ? `<span class="trace-score" style="color:${bandColor(t.score)}">${t.score.toFixed(2)}</span>` : "";
     return `<li class="trace-row">

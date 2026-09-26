@@ -51,7 +51,7 @@ def _remember_session(session_id: str, session: InterviewSession) -> None:
 async def extract_document(file: UploadFile = File(...)) -> dict:
     """Turn an uploaded resume / job-post file (PDF, DOCX, TXT, MD) into text
     the setup form can drop straight into a textarea."""
-    data = await file.read()
+    data = await file.read(MAX_UPLOAD_BYTES + 1)   # one byte over is enough to know; never load a huge file whole
     if len(data) > MAX_UPLOAD_BYTES:
         raise HTTPException(status_code=413, detail="File is larger than 5 MB.")
     try:

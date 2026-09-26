@@ -43,6 +43,17 @@ async def rate_limit(request: Request, call_next):
     return await call_next(request)
 
 
+@app.middleware("http")
+async def security_headers(request: Request, call_next):
+    # Netlify sets the page's headers (netlify.toml); these cover the API and
+    # the page when this server serves it locally.
+    response = await call_next(request)
+    response.headers.setdefault("X-Content-Type-Options", "nosniff")
+    response.headers.setdefault("X-Frame-Options", "DENY")
+    response.headers.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")
+    return response
+
+
 # The page is served from Netlify. On Render (which sets RENDER=true) this
 # server is API-only, and anyone following an old onrender.com link is sent to
 # the real page instead of a stale copy. 302, not 301: browsers cache a 301
