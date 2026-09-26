@@ -1,8 +1,14 @@
 """NVIDIA NIM provider, OpenAI-compatible chat completions API."""
+import time
+
 import httpx
 
 from callback_ai.config import settings
 from callback_ai.llm.client import AuthError, ProviderError, RateLimitedError
+
+
+_RETRY_STATUSES = {500, 502, 503, 504}
+_RETRY_WAITS_S = (1.0, 2.0)   # three tries in all
 
 
 class NimProvider:
@@ -22,17 +28,25 @@ class NimProvider:
         if json_schema is not None:
             body["response_format"] = {"type": "json_schema", "json_schema": json_schema}
 
-        try:
-            resp = httpx.post(
-                f"{self.base_url}/chat/completions",
-                headers={"Authorization": f"Bearer {self.api_key}"},
-                json=body,
-                timeout=settings.request_timeout_s,
-            )
-        except httpx.TimeoutException as e:
-            raise ProviderError(f"NIM request timed out after {settings.request_timeout_s}s") from e
-        except httpx.HTTPError as e:
-            raise ProviderError(f"could not reach NIM at {self.base_url}: {e}") from e
+        # NIM's free tier turns requests away with 503 "Service temporarily
+        # overloaded" a few percent of the time (1 in 10 when measured on
+        # 2026-09-26), and those come back in under a second. Retry those
+        # quickly; a timeout is not retried, since it already cost the full wait.
+        for attempt in range(len(_RETRY_WAITS_S) + 1):
+            try:
+                resp = httpx.post(
+                    f"{self.base_url}/chat/completions",
+                    headers={"Authorization": f"Bearer {self.api_key}"},
+                    json=body,
+                    timeout=settings.request_timeout_s,
+                )
+            except httpx.TimeoutException as e:
+                raise ProviderError(f"NIM request timed out after {settings.request_timeout_s}s") from e
+            except httpx.HTTPError as e:
+                raise ProviderError(f"could not reach NIM at {self.base_url}: {e}") from e
+            if resp.status_code not in _RETRY_STATUSES or attempt == len(_RETRY_WAITS_S):
+                break
+            time.sleep(_RETRY_WAITS_S[attempt])
 
         if resp.status_code == 429:
             raise RateLimitedError(resp.text)
