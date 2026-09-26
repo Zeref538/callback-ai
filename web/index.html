@@ -520,6 +520,7 @@ details[open] > summary .disclosure svg { transform: rotate(90deg); }
 #auth-form { display: grid; gap: .55rem; }
 .modal p.auth-msg { margin: 0; font-size: 12.5px; color: var(--danger); min-height: 0; }
 .modal p.auth-msg:empty { display: none; }
+.auth-guest { width: 100%; margin-top: .55rem; }
 .auth-links { display: flex; justify-content: space-between; margin-top: .85rem; }
 .btn-danger {
   padding: .5rem .95rem; border-radius: .5rem; background: var(--danger); color: #fff;
@@ -810,7 +811,7 @@ details[open] > summary .disclosure svg { transform: rotate(90deg); }
 <div class="modal-scrim hidden" id="auth-scrim">
   <div class="modal" role="dialog" aria-modal="true" aria-labelledby="auth-title">
     <h3 id="auth-title">Sign in</h3>
-    <p>Keep your interview history on any device. It's optional. You can keep practising as a guest. <a class="inline-link" href="/privacy.html">What's stored</a></p>
+    <p id="auth-intro">Keep your interview history on any device. It's optional. You can keep practising as a guest. <a class="inline-link" href="/privacy.html">What's stored</a></p>
     <button class="btn-outline auth-google" id="auth-google" type="button">
       <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><path fill="#4285F4" d="M22.6 12.2c0-.8-.1-1.5-.2-2.2H12v4.2h5.9a5 5 0 0 1-2.2 3.3v2.7h3.6c2.1-1.9 3.3-4.8 3.3-8z"/><path fill="#34A853" d="M12 23c3 0 5.5-1 7.3-2.7l-3.6-2.8c-1 .7-2.2 1.1-3.7 1.1-2.9 0-5.3-1.9-6.2-4.5H2.1v2.8A11 11 0 0 0 12 23z"/><path fill="#FBBC05" d="M5.8 14.1a6.6 6.6 0 0 1 0-4.2V7.1H2.1a11 11 0 0 0 0 9.8z"/><path fill="#EA4335" d="M12 5.4c1.6 0 3.1.6 4.2 1.7l3.2-3.2A11 11 0 0 0 2.1 7.1l3.7 2.8C6.7 7.3 9.1 5.4 12 5.4z"/></svg>
       Continue with Google
@@ -822,6 +823,7 @@ details[open] > summary .disclosure svg { transform: rotate(90deg); }
       <p class="auth-msg" id="auth-msg" role="alert"></p>
       <button class="btn-primary" id="auth-submit" type="submit">Sign in</button>
     </form>
+    <button class="btn-outline auth-guest hidden" id="auth-guest" type="button">Continue as guest</button>
     <div class="auth-links">
       <button class="link-btn" id="auth-switch" type="button">No account? Create one</button>
       <button class="link-btn" id="auth-cancel" type="button">Not now</button>
@@ -1449,9 +1451,25 @@ function setAuthMode(mode) {
   $("auth-switch").textContent = mode === "up" ? "Have an account? Sign in" : "No account? Create one";
   $("auth-msg").textContent = "";
 }
-const openAuth = (open) => {
+// welcome = the first-visit version: a clear "Continue as guest" choice
+// instead of the small "Not now" link.
+const WELCOMED_KEY = "callback-ai-welcomed";
+const openAuth = (open, welcome = false) => {
   $("auth-scrim").classList.toggle("hidden", !open);
-  if (open) { setAuthMode("in"); $("auth-email").focus(); }
+  if (!open) {
+    // Any way out (a choice, Escape, clicking outside) counts as answered.
+    try { localStorage.setItem(WELCOMED_KEY, "1"); } catch {}
+    return;
+  }
+  setAuthMode("in");
+  $("auth-guest").classList.toggle("hidden", !welcome);
+  $("auth-cancel").classList.toggle("hidden", welcome);
+  $("auth-intro").firstChild.textContent = welcome
+    ? "Sign in to keep your interview history on any device, or carry on as a guest. If you sign in later, your guest history comes with you. "
+    : "Keep your interview history on any device. It's optional. You can keep practising as a guest. ";
+  // On first visit focus the first button, not the email box, so a phone
+  // doesn't throw its keyboard up over the choice.
+  (welcome ? $("auth-google") : $("auth-email")).focus();
 };
 
 // Firebase's error codes, in words a person can act on.
@@ -1502,6 +1520,7 @@ async function initAccounts() {
   }
   $("signin-open").onclick = () => openAuth(true);
   $("auth-cancel").onclick = () => openAuth(false);
+  $("auth-guest").onclick = () => openAuth(false);
   document.addEventListener("keydown", (e) => { if (e.key === "Escape" && !$("auth-scrim").classList.contains("hidden")) openAuth(false); });
   $("auth-scrim").onclick = (e) => { if (e.target === $("auth-scrim")) openAuth(false); };
   $("auth-switch").onclick = () => setAuthMode(authMode === "up" ? "in" : "up");
@@ -1543,8 +1562,17 @@ async function initAccounts() {
     }
   });
   // Fires once on load (with the remembered user, or null) and on every sign-in/out.
+  let firstAuthState = true;
   fb.onAuthStateChanged(fb.auth, async (u) => {
     user = u;
+    // First visit: ask sign-in or guest, but only once Firebase has said nobody
+    // is signed in, so a returning user never sees it flash up.
+    if (firstAuthState) {
+      firstAuthState = false;
+      let welcomed = false;
+      try { welcomed = !!localStorage.getItem(WELCOMED_KEY); } catch {}
+      if (!user && !welcomed) openAuth(true, true);
+    }
     if (user) await adoptLocalHistory();
     renderAccount();
     await refreshHistory();
