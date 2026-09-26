@@ -4,6 +4,7 @@ from collections import defaultdict, deque
 from pathlib import Path
 
 from fastapi import FastAPI, Request
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 
@@ -40,6 +41,17 @@ async def rate_limit(request: Request, call_next):
             for k in [k for k, v in _hits.items() if not v or now - v[-1] > 60]:
                 _hits.pop(k, None)
     return await call_next(request)
+
+
+# Added after the rate limiter so it wraps it: a 429 still carries CORS headers
+# and the browser shows the real message instead of a vague network error.
+# The frontend is also served from Vercel/Netlify, a different origin than this API.
+app.add_middleware(
+    CORSMiddleware,
+    allow_origin_regex=r"https://callback-ai[\w-]*\.(vercel|netlify)\.app",
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 
 @app.exception_handler(AuthError)

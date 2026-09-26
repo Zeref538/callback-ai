@@ -780,7 +780,13 @@ details[open] > summary .disclosure svg { transform: rotate(90deg); }
 </div>
 
 <script>
-const API = "/api";
+// On Render or localhost one server serves both page and API. On a static host
+// (Vercel, Netlify) the page is alone, so the API is called on Render.
+const sameServer = location.hostname.endsWith("onrender.com") || ["localhost", "127.0.0.1"].includes(location.hostname);
+const API = sameServer ? "/api" : "https://callback-ai.onrender.com/api";
+// Render's free plan sleeps when idle; poke it now so it's awake by the time
+// the form is filled in instead of stalling the first real request.
+fetch(`${API}/health`).catch(() => {});
 const HISTORY_KEY = "callback-ai-history";
 const state = { sessionId: null, persona: "neutral", seniority: "mid", competencies: [], budget: 12, turn: 0, spend: {}, report: null };
 const $ = (id) => document.getElementById(id);
