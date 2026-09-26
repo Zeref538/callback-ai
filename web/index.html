@@ -261,12 +261,12 @@ ul { list-style: none; padding: 0; }
 label { font-size: 14px; font-weight: 500; }
 .link-btn { display: inline-flex; align-items: center; gap: .25rem; font-size: 12px; color: var(--primary); }
 .link-btn:hover { text-decoration: underline; }
-textarea, input[type="url"] {
+textarea, input[type="url"], input[type="email"], input[type="password"] {
   width: 100%; padding: .5rem .75rem; border-radius: .5rem;
   border: 1px solid var(--border); background: var(--secondary);
   font-size: 14px; outline: none; resize: vertical;
 }
-textarea:focus, input[type="url"]:focus { border-color: var(--primary); }
+textarea:focus, input[type="url"]:focus, input[type="email"]:focus, input[type="password"]:focus { border-color: var(--primary); }
 ::placeholder { color: var(--muted-fg); }
 .hint { margin-top: .4rem; font-size: 12px; color: var(--muted-fg); }
 
@@ -494,6 +494,19 @@ details[open] > summary .disclosure svg { transform: rotate(90deg); }
 .modal h3 { font-size: 1.05rem; margin-bottom: .45rem; }
 .modal p { font-size: 13.5px; color: var(--muted-fg); margin-bottom: 1.2rem; }
 .modal-actions { display: flex; justify-content: flex-end; gap: .5rem; }
+
+/* ---------- account ---------- */
+.account { padding: .75rem .75rem 0; }
+.account .btn-outline { width: 100%; font-size: 13px; }
+.account-row { display: flex; align-items: center; justify-content: space-between; gap: .5rem; font-size: 12.5px; }
+.account-email { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--muted-fg); }
+.auth-google { width: 100%; display: flex; align-items: center; justify-content: center; gap: .5rem; }
+.auth-or { display: flex; align-items: center; gap: .6rem; margin: .9rem 0; font-size: 12px; color: var(--muted-fg); }
+.auth-or::before, .auth-or::after { content: ""; flex: 1; height: 1px; background: var(--border); }
+#auth-form { display: grid; gap: .55rem; }
+.modal p.auth-msg { margin: 0; font-size: 12.5px; color: var(--danger); min-height: 0; }
+.modal p.auth-msg:empty { display: none; }
+.auth-links { display: flex; justify-content: space-between; margin-top: .85rem; }
 .btn-danger {
   padding: .5rem .95rem; border-radius: .5rem; background: var(--danger); color: #fff;
   font-size: 14px; font-weight: 500; transition: opacity .15s;
@@ -607,6 +620,14 @@ details[open] > summary .disclosure svg { transform: rotate(90deg); }
         <ul id="history-list"></ul>
       </div>
     </nav>
+
+    <div class="account hidden" id="account">
+      <button class="btn-outline" id="signin-open" type="button">Sign in to save your history</button>
+      <div class="account-row hidden" id="account-row">
+        <span class="account-email" id="account-email"></span>
+        <button class="hist-clear" id="signout" type="button">Sign out</button>
+      </div>
+    </div>
 
     <div class="side-foot">Practice tool — scores are an LLM's read of your answers, not a hiring decision.</div>
   </aside>
@@ -767,6 +788,29 @@ details[open] > summary .disclosure svg { transform: rotate(90deg); }
   </div>
 </div>
 
+<!-- optional sign-in: Google or email + password, handled by Supabase -->
+<div class="modal-scrim hidden" id="auth-scrim">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="auth-title">
+    <h3 id="auth-title">Sign in</h3>
+    <p>Keep your interview history on any device. It's optional — you can keep practising as a guest.</p>
+    <button class="btn-outline auth-google" id="auth-google" type="button">
+      <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><path fill="#4285F4" d="M22.6 12.2c0-.8-.1-1.5-.2-2.2H12v4.2h5.9a5 5 0 0 1-2.2 3.3v2.7h3.6c2.1-1.9 3.3-4.8 3.3-8z"/><path fill="#34A853" d="M12 23c3 0 5.5-1 7.3-2.7l-3.6-2.8c-1 .7-2.2 1.1-3.7 1.1-2.9 0-5.3-1.9-6.2-4.5H2.1v2.8A11 11 0 0 0 12 23z"/><path fill="#FBBC05" d="M5.8 14.1a6.6 6.6 0 0 1 0-4.2V7.1H2.1a11 11 0 0 0 0 9.8z"/><path fill="#EA4335" d="M12 5.4c1.6 0 3.1.6 4.2 1.7l3.2-3.2A11 11 0 0 0 2.1 7.1l3.7 2.8C6.7 7.3 9.1 5.4 12 5.4z"/></svg>
+      Continue with Google
+    </button>
+    <div class="auth-or"><span>or</span></div>
+    <form id="auth-form">
+      <input type="email" id="auth-email" aria-label="Email" placeholder="Email" autocomplete="email" required>
+      <input type="password" id="auth-password" aria-label="Password" placeholder="Password (8+ characters)" autocomplete="current-password" minlength="8" required>
+      <p class="auth-msg" id="auth-msg" role="alert"></p>
+      <button class="btn-primary" id="auth-submit" type="submit">Sign in</button>
+    </form>
+    <div class="auth-links">
+      <button class="link-btn" id="auth-switch" type="button">No account? Create one</button>
+      <button class="link-btn" id="auth-cancel" type="button">Not now</button>
+    </div>
+  </div>
+</div>
+
 <!-- staged setup loader: names each step (reading job post, scraping the
      portfolio, writing the first question…) so the wait reads as work. -->
 <div class="loader hidden" id="loader" aria-live="polite">
@@ -779,6 +823,9 @@ details[open] > summary .disclosure svg { transform: rotate(90deg); }
   </div>
 </div>
 
+<!-- Supabase browser library, pinned to an exact version so a new release
+     can't change the page under us. If it fails to load, the app runs guest-only. -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.2/dist/umd/supabase.js"></script>
 <script>
 // On Render or localhost one server serves both page and API. On a static host
 // (Netlify) the page is alone, so the API is called on Render.
@@ -1270,16 +1317,51 @@ $("fill-sample").onclick = () => {
 };
 
 // ---------- history ----------
-const loadHistory = () => { try { return JSON.parse(localStorage.getItem(HISTORY_KEY)) || []; } catch { return []; } };
-function addHistory(entry) {
-  localStorage.setItem(HISTORY_KEY, JSON.stringify([entry, ...loadHistory()].slice(0, 30)));
+// Newest first. Comes from the account when signed in, else from this browser.
+let pastSessions = [];
+const loadLocal = () => { try { return JSON.parse(localStorage.getItem(HISTORY_KEY)) || []; } catch { return []; } };
+const saveLocal = (items) => localStorage.setItem(HISTORY_KEY, JSON.stringify(items.slice(0, 30)));
+const toRow = (entry) => ({ entry, created_at: new Date(entry.at || Date.now()).toISOString() });
+
+async function refreshHistory() {
+  if (user) {
+    const { data, error } = await sb.from("interviews").select("entry").order("created_at", { ascending: false }).limit(30);
+    if (error) toast("Couldn't load your saved interviews.", true);
+    pastSessions = error ? [] : data.map((r) => r.entry);
+  } else {
+    pastSessions = loadLocal();
+  }
   renderHistory();
+}
+
+async function addHistory(entry) {
+  pastSessions = [entry, ...pastSessions].slice(0, 30);
+  renderHistory();
+  if (user) {
+    const { error } = await sb.from("interviews").insert(toRow(entry));
+    if (!error) return;
+    // Keep it on this device so it isn't lost; it's uploaded on next sign-in.
+    toast("Couldn't reach your account — saved on this device for now.", true);
+  }
+  saveLocal([entry, ...loadLocal()]);
+}
+
+// Last score per competency, newest first wins. Sent when an interview starts
+// so the report can say "vs last time" from this person's own history.
+function previousScores() {
+  const prev = {};
+  for (const item of pastSessions) {
+    for (const r of item.report?.competency_reports || []) {
+      if (typeof r.score === "number" && !(r.competency in prev)) prev[r.competency] = Math.min(1, Math.max(0, r.score));
+    }
+  }
+  return Object.fromEntries(Object.entries(prev).slice(0, 100));
 }
 function bandColor(s) { return s >= 0.7 ? "var(--success)" : s >= 0.5 ? "var(--warning)" : "var(--danger)"; }
 function bandLabel(s) { return s >= 0.7 ? "strong" : s >= 0.5 ? "developing" : "needs work"; }
 
 function renderHistory() {
-  const items = loadHistory();
+  const items = pastSessions;
   $("history-empty").classList.toggle("hidden", items.length > 0);
   $("history-wrap").classList.toggle("hidden", items.length === 0);
   const list = $("history-list");
@@ -1297,7 +1379,99 @@ function renderHistory() {
     list.appendChild(li);
   });
 }
-$("clear-history").onclick = () => { localStorage.removeItem(HISTORY_KEY); renderHistory(); toast("History cleared."); };
+$("clear-history").onclick = async () => {
+  if (user) {
+    const ok = await showConfirm({
+      title: "Delete your saved interviews?",
+      body: "This removes them from your account on every device. It can't be undone.",
+      confirmLabel: "Delete", cancelLabel: "Keep",
+    });
+    if (!ok) return;
+    const { error } = await sb.from("interviews").delete().eq("user_id", user.id);
+    if (error) { toast("Couldn't delete — try again.", true); return; }
+  } else {
+    localStorage.removeItem(HISTORY_KEY);
+  }
+  pastSessions = [];
+  renderHistory();
+  toast("History cleared.");
+};
+
+// ---------- accounts (optional) ----------
+// Supabase handles sign-in and stores history. Both values are public by
+// design: the database's row-level security rules are what keep each
+// person's rows private. Left empty, the app runs guest-only.
+const SUPABASE_URL = "";
+const SUPABASE_KEY = "";   // the "publishable" key, never the secret one
+const sb = SUPABASE_URL && window.supabase ? window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY) : null;
+let user = null;
+let authMode = "in";   // "in" = sign in, "up" = create account
+
+function renderAccount() {
+  $("account").classList.toggle("hidden", !sb);
+  $("signin-open").classList.toggle("hidden", !!user);
+  $("account-row").classList.toggle("hidden", !user);
+  if (user) $("account-email").textContent = user.email || "Signed in";
+}
+
+function setAuthMode(mode) {
+  authMode = mode;
+  $("auth-title").textContent = mode === "up" ? "Create an account" : "Sign in";
+  $("auth-submit").textContent = mode === "up" ? "Create account" : "Sign in";
+  $("auth-password").autocomplete = mode === "up" ? "new-password" : "current-password";
+  $("auth-switch").textContent = mode === "up" ? "Have an account? Sign in" : "No account? Create one";
+  $("auth-msg").textContent = "";
+}
+const openAuth = (open) => {
+  $("auth-scrim").classList.toggle("hidden", !open);
+  if (open) { setAuthMode("in"); $("auth-email").focus(); }
+};
+
+// A guest's history moves into their account the first time they sign in,
+// so trying the app before signing up doesn't cost them anything.
+async function adoptLocalHistory() {
+  const local = loadLocal();
+  if (!local.length) return;
+  const { error } = await sb.from("interviews").insert(local.map(toRow));
+  if (!error) localStorage.removeItem(HISTORY_KEY);
+}
+
+if (sb) {
+  $("signin-open").onclick = () => openAuth(true);
+  $("auth-cancel").onclick = () => openAuth(false);
+  document.addEventListener("keydown", (e) => { if (e.key === "Escape" && !$("auth-scrim").classList.contains("hidden")) openAuth(false); });
+  $("auth-scrim").onclick = (e) => { if (e.target === $("auth-scrim")) openAuth(false); };
+  $("auth-switch").onclick = () => setAuthMode(authMode === "up" ? "in" : "up");
+  $("signout").onclick = () => sb.auth.signOut();
+  $("auth-google").onclick = async () => {
+    // Leaves the page for Google and comes back here signed in.
+    const { error } = await sb.auth.signInWithOAuth({ provider: "google", options: { redirectTo: location.origin + location.pathname } });
+    if (error) $("auth-msg").textContent = error.message;
+  };
+  $("auth-form").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const email = $("auth-email").value.trim(), password = $("auth-password").value;
+    $("auth-submit").disabled = true;
+    const { data, error } = authMode === "up"
+      ? await sb.auth.signUp({ email, password, options: { emailRedirectTo: location.origin + location.pathname } })
+      : await sb.auth.signInWithPassword({ email, password });
+    $("auth-submit").disabled = false;
+    if (error) { $("auth-msg").textContent = error.message; return; }
+    if (authMode === "up" && !data.session) { $("auth-msg").textContent = "Check your inbox to confirm your email, then sign in."; return; }
+    openAuth(false);
+  });
+  sb.auth.onAuthStateChange((event, session) => {
+    const before = user?.id;
+    user = session?.user || null;
+    if (event !== "INITIAL_SESSION" && user?.id === before) return;   // token refresh etc.
+    // Supabase calls made inside this callback can deadlock; run them after it.
+    setTimeout(async () => {
+      if (user) { await adoptLocalHistory(); if (event === "SIGNED_IN") toast("Signed in — your history is saved to your account."); }
+      renderAccount();
+      await refreshHistory();
+    }, 0);
+  });
+}
 
 // ---------- rubric rail ----------
 function renderRubricPanel() {
@@ -1417,6 +1591,7 @@ $("setup-form").addEventListener("submit", async (e) => {
         portfolio_link: $("portfolio-link").value.trim() || null,
         persona: state.persona,
         seniority: state.seniority || "mid",
+        previous_scores: previousScores(),
       }),
     });
     if (!resp.ok) throw new Error((await resp.json()).detail || "Failed to start session.");
@@ -1795,7 +1970,8 @@ function renderReport(report, delta, trace) {
   card.scrollIntoView({ behavior: "smooth", block: "start" });
 }
 
-renderHistory();
+renderAccount();
+if (!sb) refreshHistory();   // with accounts on, the auth listener loads it once the session is known
 </script>
 </body>
 </html>
