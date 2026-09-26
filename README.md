@@ -159,7 +159,15 @@ setup costs one call's latency, not three. The frontend is a single static page
 
 ## Deploy
 
-**One click:** the repo ships a [`render.yaml`](render.yaml) blueprint. In
+**The page (Netlify)** publishes the `live` branch, not `master`. Netlify's free
+plan allows 20 production deploys a month, so work lands on `master` for free
+and goes live in one batch:
+
+```bash
+git push origin master:live    # publishes whatever master has now
+```
+
+**The API, one click:** the repo ships a [`render.yaml`](render.yaml) blueprint. In
 Render, *New → Blueprint → this repo*, then set `NIM_API_KEY` in the dashboard
 (it's `sync:false`, never committed). Health-checks `/api/health` automatically.
 
