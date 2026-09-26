@@ -1731,7 +1731,11 @@ async function initAccounts() {
   };
   $("auth-google").onclick = async () => {
     // A pop-up, not a redirect: the page (and any interview in it) stays put.
-    try { await fb.signInWithPopup(fb.auth, new fb.GoogleAuthProvider()); signedIn(); }
+    // Without prompt=select_account Google silently uses whichever account
+    // the browser is signed into first, which may not be the one you want.
+    const google = new fb.GoogleAuthProvider();
+    google.setCustomParameters({ prompt: "select_account" });
+    try { await fb.signInWithPopup(fb.auth, google); signedIn(); }
     catch (err) { if (err.code !== "auth/popup-closed-by-user" && err.code !== "auth/cancelled-popup-request") showAuthMsg(authError(err)); }
   };
   $("auth-form").addEventListener("submit", async (e) => {
