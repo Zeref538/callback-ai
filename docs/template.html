@@ -613,7 +613,7 @@
     much, and how did you know? That follow-up is where interviews are decided, and a
     list of practice questions never asks it. This interviewer reads your answer,
     decides whether it was specific enough, and asks again when it wasn't. Every score
-    in the debrief quotes your own words.
+    has to quote your own words, and one that can't is marked unverified.
   </p>
   <p class="lede side-lede" data-mode="expert">
     An LLM agent that turns a job post into weighted competencies, spends a fixed
@@ -639,7 +639,7 @@
       <ol class="steps">
         <li><span class="it">01</span><b>Read</b>Turn the job post into the few skills the role is really hiring for.</li>
         <li><span class="it">02</span><b>Ask</b>Spend each question where it knows least. Follow up on vague answers.</li>
-        <li><span class="it">03</span><b>Grade</b>Every score quotes your words, or it is thrown out and redone.</li>
+        <li><span class="it">03</span><b>Grade</b>Every score must quote your words. If not, it is redone once, then flagged.</li>
       </ol>
       <p class="caps try">The follow-up rule, running live <span class="it">on a real job post's skills</span></p>
   <div class="scorer">
@@ -835,8 +835,8 @@
       <h3>Enforced in code</h3>
       <ul style="margin:0">
         <li>Follow up or move on: score against a fixed threshold</li>
-        <li>At most one follow-up per skill, four questions per skill</li>
-        <li>12 questions, never more</li>
+        <li>At most one follow-up per skill; a skill stops being chosen after four questions</li>
+        <li>A fixed budget: 12 questions in the app</li>
         <li>The quote must appear word for word in your answer</li>
       </ul>
     </div>
@@ -881,8 +881,8 @@
     return _normalize(quote) in _normalize(transcript)</code></pre>
   <p>
     It is deliberately dumb. A second model asked "is this grounded?" can be talked into
-    yes. A substring test cannot. The same gate guards the scores during the interview
-    and the final debrief, so the debrief cannot cite anything the live scores could not.
+    yes. A substring test cannot. The final debrief's scores go through the same check,
+    against the same answers, and any that fail it are shown as low confidence.
   </p>
     </div>
   </div>
@@ -911,12 +911,13 @@
     broken by rubric order so the choice is deterministic.
   </p>
 
-  <h3>The first version never asked about half the job</h3>
+  <h3>The first version never asked about 2 of the 5 skills</h3>
   <p>
     Ranking only by weight &times; uncertainty has a trap. A weak answer makes that skill
     more uncertain, which makes it the top priority again, which gets another weak answer.
-    The budget collapsed onto the first few skills and the rest were never asked about at
-    all, so the debrief had nothing to score them on.
+    In a 12-question session over 5 skills, every question went to the first 3 and the
+    other 2 were never asked about, so the debrief had nothing to score them on. The
+    offline mock model caught it before any real key was used.
   </p>
   <p>
     The fix was to put coverage first: any skill not yet asked about outranks every skill
@@ -1047,8 +1048,9 @@ CALLBACK_AI_PROVIDER=mock python -m callback_ai.server   # then open localhost:8
     Needs a free NVIDIA key from <a href="https://build.nvidia.com">build.nvidia.com</a>
     in <code>.env</code>. One run takes about two and a half minutes.
   </p>
-  <pre><code>NIM_MODEL=nvidia/nemotron-3-super-120b-a12b python -m eval.run_all nemotron-run3
-python docs/build_site.py          # rebuilds this page from eval/results/</code></pre>
+  <pre><code>NIM_MODEL=nvidia/nemotron-3-super-120b-a12b python -m eval.run_all nemotron-run1
+NIM_MODEL=nvidia/nemotron-3-super-120b-a12b python -m eval.run_all nemotron-run2
+python docs/build_site.py          # rebuilds this page, and fails if the prose is now wrong</code></pre>
   <p class="small muted">
     <b>Stack:</b> Python, FastAPI, NVIDIA NIM (Nemotron 3 Super), Microsoft neural voices
     via <code>edge-tts</code>, plain HTML and CSS on Netlify, the API on Render, optional

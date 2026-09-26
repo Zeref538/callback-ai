@@ -29,7 +29,7 @@ bare `0.62`.
 |---|---|
 | **It probes.** | Vague answers get pressed on the *same* competency until they're specific. The agent chooses to follow up, it isn't scripted to. |
 | **It budgets.** | 12 questions, reallocated after every answer toward the competencies it's least sure about (weight × uncertainty), not spread evenly. |
-| **It cites.** | Every score must quote your transcript *verbatim*. A score whose quote can't be found is rejected and regenerated, never shown. |
+| **It cites.** | Every score must quote your transcript *verbatim*. A score whose quote can't be found is rejected and regenerated once; if the retry fails too, it is shown flagged *low confidence*. |
 | **It remembers.** | Weak competencies persist across sessions; the next run biases its budget toward them and the debrief shows your **delta since last time**. |
 | **It talks.** | Each interviewer has a distinct **neural voice** (free, no key) and reads questions aloud; you can answer back **by voice** with a live mic meter. |
 
