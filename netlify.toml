@@ -3,7 +3,20 @@
 [build]
   publish = "web"
 
-# Security headers for every page. The CSP lists each outside server the page
+# Google sign-in runs through this site's own address, so Google's screen says
+# "continue to callback-ai.netlify.app" instead of the Firebase project name.
+# Netlify fetches these paths from Firebase and returns them unchanged (a
+# proxy, status 200), which is Firebase's documented option 3:
+# https://firebase.google.com/docs/auth/web/redirect-best-practices
+[[redirects]]
+  from = "/__/auth/*"
+  to = "https://callback-ai-95df3.firebaseapp.com/__/auth/:splat"
+  status = 200
+  force = true
+
+# Strict headers only on this site's own pages. They must not reach the proxied
+# /__/auth/ pages: Firebase loads one of those in a hidden frame, which
+# X-Frame-Options DENY would block. The CSP lists each outside server the page
 # really uses; anything else is blocked:
 #   fonts.googleapis.com / fonts.gstatic.com  - Google Fonts
 #   callback-ai.onrender.com                  - the API
@@ -13,10 +26,22 @@
 # 'unsafe-inline' is needed because the app's script and styles live inside
 # index.html; moving them to files would let it go.
 [[headers]]
+  for = "/"
+  [headers.values]
+    Content-Security-Policy = "default-src 'self'; script-src 'self' 'unsafe-inline' https://www.gstatic.com https://apis.google.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob:; media-src 'self' data: blob:; connect-src 'self' https://callback-ai.onrender.com https://*.googleapis.com https://www.gstatic.com; frame-src 'self' https://*.firebaseapp.com https://accounts.google.com https://apis.google.com; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'"
+    X-Frame-Options = "DENY"
+    Permissions-Policy = "microphone=(self), camera=(), geolocation=()"
+
+[[headers]]
+  for = "/*.html"
+  [headers.values]
+    Content-Security-Policy = "default-src 'self'; script-src 'self' 'unsafe-inline' https://www.gstatic.com https://apis.google.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob:; media-src 'self' data: blob:; connect-src 'self' https://callback-ai.onrender.com https://*.googleapis.com https://www.gstatic.com; frame-src 'self' https://*.firebaseapp.com https://accounts.google.com https://apis.google.com; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'"
+    X-Frame-Options = "DENY"
+    Permissions-Policy = "microphone=(self), camera=(), geolocation=()"
+
+# Safe everywhere, including the proxied pages.
+[[headers]]
   for = "/*"
   [headers.values]
-    Content-Security-Policy = "default-src 'self'; script-src 'self' 'unsafe-inline' https://www.gstatic.com https://apis.google.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob:; media-src 'self' data: blob:; connect-src 'self' https://callback-ai.onrender.com https://*.googleapis.com https://www.gstatic.com; frame-src https://*.firebaseapp.com https://accounts.google.com https://apis.google.com; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'"
     X-Content-Type-Options = "nosniff"
-    X-Frame-Options = "DENY"
     Referrer-Policy = "strict-origin-when-cross-origin"
-    Permissions-Policy = "microphone=(self), camera=(), geolocation=()"
