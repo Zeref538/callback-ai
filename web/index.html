@@ -1609,13 +1609,13 @@ function bubbleAnswer(text) {
   div.scrollIntoView({ behavior: "smooth", block: "end" });
   return div;
 }
-function typingIndicator(on) {
+function typingIndicator(on, label = "scoring your answer &amp; choosing the next question…") {
   const old = $("typing");
   if (old) old.remove();
   if (!on) return;
   const div = document.createElement("div");
   div.id = "typing";
-  div.innerHTML = `<div class="typing"><i></i><i></i><i></i> scoring your answer &amp; choosing the next question…</div>`;
+  div.innerHTML = `<div class="typing"><i></i><i></i><i></i> ${label}</div>`;
   els.transcript.appendChild(div);
   div.scrollIntoView({ behavior: "smooth", block: "end" });
 }
@@ -1741,6 +1741,9 @@ els.answerForm.addEventListener("submit", async (e) => {
     if (data.done) {
       els.composer.classList.add("hidden");
       stopSpeaking();
+      // The debrief is several model calls; on NIM's free tier it took ~66s
+      // (2026-09-26), so say so instead of leaving a blank, frozen-looking screen.
+      typingIndicator(true, "writing your debrief. This can take a minute…");
       await loadReport();
     } else {
       // Same competency two turns running = the agent is probing deeper, not
@@ -1797,7 +1800,8 @@ window.addEventListener("beforeunload", (e) => {
 
 // ---------- report ----------
 async function loadReport() {
-  const resp = await fetch(`${API}/sessions/${state.sessionId}/report`);
+  let resp;
+  try { resp = await fetch(`${API}/sessions/${state.sessionId}/report`); } finally { typingIndicator(false); }
   if (!resp.ok) { toast("Could not load the report.", true); return; }
   const data = await resp.json();
   // The agent trace (its turn-by-turn decisions) is a separate, best-effort
