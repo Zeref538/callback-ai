@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://callback-ai.netlify.app/sitemap.xml
